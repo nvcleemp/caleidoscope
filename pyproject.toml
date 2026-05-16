@@ -1,0 +1,13 @@
+[project]
+name = "caleidoscope-group"
+version = "0.1.0"
+description = "Creating repeating patterns"
+readme = "README.md"
+authors = [
+    { name = "nvcleemp" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[tool.uv.workspace]
+members = ["libs/*", "examples/*"]
