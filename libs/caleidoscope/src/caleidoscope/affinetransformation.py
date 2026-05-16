@@ -21,7 +21,7 @@ class Transform2D:
     represents rotation, reflection, scaling, and shear.
     """
 
-    def __init__(self, matrix=None):
+    def __init__(self, matrix: list[list[float]] | None = None) -> None:
         """
         Initialize a transformation.
 
@@ -34,7 +34,7 @@ class Transform2D:
         else:
             self.matrix = [row[:] for row in matrix]  # Deep copy
 
-    def apply(self, point):
+    def apply(self, point: tuple[float, float]) -> tuple[float, float]:
         """
         Apply the transformation to a point.
 
@@ -50,7 +50,7 @@ class Transform2D:
         y_new = self.matrix[1][0] * x + self.matrix[1][1] * y + self.matrix[1][2]
         return (x_new, y_new)
 
-    def compose(self, other):
+    def compose(self, other: "Transform2D") -> "Transform2D":
         """
         Compose this transformation with another (apply other first, then this).
 
@@ -71,7 +71,7 @@ class Transform2D:
         return Transform2D(result)
 
     @staticmethod
-    def translate(dx, dy):
+    def translate(dx: float, dy: float) -> "Transform2D":
         """
         Create a translation transformation.
 
@@ -85,7 +85,7 @@ class Transform2D:
         return Transform2D([[1.0, 0.0, dx], [0.0, 1.0, dy], [0.0, 0.0, 1.0]])
 
     @staticmethod
-    def rotate(angle_rad, pivot_x=0.0, pivot_y=0.0):
+    def rotate(angle_rad: float, pivot_x: float = 0.0, pivot_y: float = 0.0) -> "Transform2D":
         """
         Create a rotation transformation around a pivot point.
 
@@ -116,7 +116,7 @@ class Transform2D:
             )
 
     @staticmethod
-    def reflect_x():
+    def reflect_x() -> "Transform2D":
         """
         Create a reflection transformation across the x-axis.
 
