@@ -3,10 +3,45 @@ Euclidean geometry transformations in 2D.
 
 This module provides 2D affine transformations using homogeneous coordinates
 represented as 3x3 matrices, without requiring external dependencies.
+
+Example usage:
+    >>> # Create a transformation from segment (0,0)-(1,0) to (5,5)-(5,6)
+    >>> transform = Transform2D.from_two_segments((0, 0), (1, 0), (5, 5), (5, 6), keep_orientation=True)
+    >>> result = transform.apply((1, 0))
+    >>> print(result)  # Should be close to (5, 6)
 """
 
 import math
 
+
+def _compute_angle_xy(x: float, y: float) -> float:
+    """
+    Compute the angle of a 2D vector with respect to the positive x-axis in radians.
+
+    Args:
+        x: X component of the vector
+        y: Y component of the vector
+
+    Returns:
+        Angle in radians, in the range [0, 2π) for most cases.
+    """
+    if x != 0:
+        a = math.atan(abs(y) / abs(x))
+
+        if x > 0:
+            if y > 0:
+                return a
+            else:
+                return 2.0 * math.pi - a
+        else:  # x < 0
+            if y > 0:
+                return math.pi - a
+            else:
+                return math.pi + a
+    elif y > 0:
+        return 0.5 * math.pi
+    else:  # y < 0
+        return 1.5 * math.pi
 
 class Transform2D:
     """
@@ -124,6 +159,91 @@ class Transform2D:
             A Transform2D representing the reflection.
         """
         return Transform2D([[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]])
+
+    @staticmethod
+    def from_two_segments(a1: tuple[float, float], b1: tuple[float, float], a2: tuple[float, float], b2: tuple[float, float], keep_orientation: bool = True) -> "Transform2D":
+        """
+        Create a transformation that maps segment a1-b1 to segment a2-b2.
+
+        This function creates a 2D affine transformation that maps point a1 to a2
+        and point b1 to b2. The transformation preserves distances (assuming the
+        segments have the same length).
+
+        Based on code from Tegula.
+
+        Args:
+            a1: Source point as tuple (x, y).
+            b1: Source point as tuple (x, y).
+            a2: Target point as tuple (x, y).
+            b2: Target point as tuple (x, y).
+            keep_orientation: If True, preserves orientation (rotation only).
+                             If False, allows reflection (flips orientation).
+
+        Returns:
+            A Transform2D object representing the transformation.
+
+        Example:
+            >>> # Map horizontal segment to vertical segment
+            >>> t = Transform2D.from_two_segments((0, 0), (1, 0), (0, 0), (0, 1), keep_orientation=True)
+            >>> result = t.apply((1, 0))
+            >>> # result should be close to (0, 1)
+        """
+        a1_x, a1_y = a1
+        b1_x, b1_y = b1
+        a2_x, a2_y = a2
+        b2_x, b2_y = b2
+
+        # Compute direction vectors
+        v1_x = b1_x - a1_x
+        v1_y = b1_y - a1_y
+        v2_x = b2_x - a2_x
+        v2_y = b2_y - a2_y
+
+        if keep_orientation:
+            # Compute angle difference
+            angle1 = _compute_angle_xy(v1_x, v1_y)
+            angle2 = _compute_angle_xy(v2_x, v2_y)
+            diff = angle2 - angle1
+
+            # Create transformations: rotate around a1, then translate to a2
+            rotate = Transform2D.rotate(diff, a1_x, a1_y)
+            translate = Transform2D.translate(a2_x - a1_x, a2_y - a1_y)
+
+            # Compose: translate(rotate(...))
+            return translate.compose(rotate)
+        else:
+            # More complex transformation with reflection
+            angle1 = _compute_angle_xy(v1_x, v1_y)
+            angle2 = _compute_angle_xy(v2_x, v2_y)
+
+            # Step 1: Rotate so that a1-b1 is parallel to x-axis
+            rotate1 = Transform2D.rotate(-angle1, a1_x, a1_y)
+
+            # Step 2: Translate to x-axis
+            trans_to_x_axis = Transform2D.translate(0, -a1_y)
+
+            # Step 3: Reflect across x-axis
+            reflect = Transform2D.reflect_x()
+
+            # Step 4: Translate back from x-axis
+            trans_back = Transform2D.translate(0, a1_y)
+
+            # Step 5: Rotate to match angle of a2-b2
+            rotate2 = Transform2D.rotate(angle2, a1_x, a1_y)
+
+            # Step 6: Translate a1 to a2
+            translate = Transform2D.translate(a2_x - a1_x, a2_y - a1_y)
+
+            # Compose all transformations (right to left)
+            # translate(rotate2(trans_back(reflect(trans_to_x_axis(rotate1(...))))))
+            result = translate
+            result = result.compose(rotate2)
+            result = result.compose(trans_back)
+            result = result.compose(reflect)
+            result = result.compose(trans_to_x_axis)
+            result = result.compose(rotate1)
+
+            return result
 
     def __repr__(self):
         """String representation for debugging."""
