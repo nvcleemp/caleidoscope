@@ -245,6 +245,83 @@ class Transform2D:
 
             return result
 
+    @staticmethod
+    def from_two_triplets(
+        triplet_from: tuple[tuple[float, float], tuple[float, float], tuple[float, float]],
+        triplet_to: tuple[tuple[float, float], tuple[float, float], tuple[float, float]]
+    ) -> "Transform2D":
+        """
+        Create a transformation that maps one triplet of points to another.
+
+        Each triplet is a tuple of three points that can be seen as determining
+        a base (origin, x_endpoint, y_endpoint) of 2D space. This method creates a
+        transformation that maps the three points of triplet_from to the
+        corresponding three points of triplet_to.
+
+        Args:
+            triplet_from: Tuple of three points ((a1x, a1y), (b1x, b1y), (c1x, c1y))
+                      representing the source triplet.
+            triplet_to: Tuple of three points ((a2x, a2y), (b2x, b2y), (c2x, c2y))
+                    representing the target triplet.
+
+        Returns:
+            A Transform2D representing the triplet transition.
+
+        Raises:
+            ValueError: If the basis vectors in triplet_from are collinear or degenerate.
+
+        Example:
+            >>> # Map standard basis translated by (5,3)
+            >>> triplet_from = ((0, 0), (1, 0), (0, 1))
+            >>> triplet_to = ((5, 3), (6, 3), (5, 4))
+            >>> t = Transform2D.from_two_triplets(triplet_from, triplet_to)
+            >>> result = t.apply((0, 0))
+            >>> # result should be (5, 3)
+        """
+        # Extract points from each triplet
+        a_from, b_from, c_from = triplet_from
+        a_to, b_to, c_to = triplet_to
+
+        # Compute basis vectors for triplet_from
+        x_vec_from_x = b_from[0] - a_from[0]
+        x_vec_from_y = b_from[1] - a_from[1]
+        y_vec_from_x = c_from[0] - a_from[0]
+        y_vec_from_y = c_from[1] - a_from[1]
+
+        # Compute basis vectors for triplet_to
+        x_vec_to_x = b_to[0] - a_to[0]
+        x_vec_to_y = b_to[1] - a_to[1]
+        y_vec_to_x = c_to[0] - a_to[0]
+        y_vec_to_y = c_to[1] - a_to[1]
+
+        # Compute determinant of triplet_from matrix
+        det = x_vec_from_x * y_vec_from_y - x_vec_from_y * y_vec_from_x
+
+        if abs(det) < 1e-10:
+            raise ValueError(
+                "triplet_from vectors are collinear or degenerate (determinant near zero)"
+            )
+
+        # Compute inverse of triplet_from matrix
+        b_from_inv_00 = y_vec_from_y / det
+        b_from_inv_01 = -y_vec_from_x / det
+        b_from_inv_10 = -x_vec_from_y / det
+        b_from_inv_11 = x_vec_from_x / det
+
+        # Compute linear transformation matrix: L = B_to * B_from_inv
+        m00 = x_vec_to_x * b_from_inv_00 + y_vec_to_x * b_from_inv_10
+        m01 = x_vec_to_x * b_from_inv_01 + y_vec_to_x * b_from_inv_11
+        m10 = x_vec_to_y * b_from_inv_00 + y_vec_to_y * b_from_inv_10
+        m11 = x_vec_to_y * b_from_inv_01 + y_vec_to_y * b_from_inv_11
+
+        # Compute translation components
+        # The transformation maps: a_to + L * (point - a_from)
+        # Expanding: a_to + L * point - L * a_from
+        tx = a_to[0] - m00 * a_from[0] - m01 * a_from[1]
+        ty = a_to[1] - m10 * a_from[0] - m11 * a_from[1]
+
+        return Transform2D([[m00, m01, tx], [m10, m11, ty], [0.0, 0.0, 1.0]])
+
     def __repr__(self):
         """String representation for debugging."""
         return (
