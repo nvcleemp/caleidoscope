@@ -12,6 +12,44 @@ Example usage:
 """
 
 import math
+from dataclasses import dataclass
+from typing import Any, Literal
+
+
+@dataclass
+class TransformationClassification:
+    """
+    Machine-readable classification of an affine transformation.
+
+    Attributes:
+        type: The type of transformation (identity, translation, rotation, etc.)
+        parameters: Dictionary containing type-specific parameters:
+            - identity: {} (no parameters)
+            - translation: {"vector": (tx, ty)}
+            - rotation: {"angle_rad": float, "pivot": (cx, cy)}
+            - reflection: {"axis_point": (px, py), "axis_direction": (dx, dy), 
+                          "line_equation": (a, b, c)}
+            - glide_reflection: {"axis_point": (px, py), "axis_direction": (dx, dy), 
+                                "glide_vector": (gx, gy), "line_equation": (a, b, c)}
+            - uniform_scaling: {"factor": float, "translation": (tx, ty)}
+            - non_uniform_scaling: {"x_factor": float, "y_factor": float, 
+                                   "translation": (tx, ty)}
+            - complex_affine: {"matrix": [[a, b, tx], [c, d, ty]]}
+
+    Note:
+        For reflection/glide_reflection, the line_equation (a, b, c) represents: a*x + b*y + c = 0
+    """
+    type: Literal[
+        "identity",
+        "translation",
+        "rotation",
+        "reflection",
+        "glide_reflection",
+        "uniform_scaling",
+        "non_uniform_scaling",
+        "complex_affine"
+    ]
+    parameters: dict[str, Any]
 
 
 def _compute_angle_xy(x: float, y: float) -> float:
@@ -321,6 +359,193 @@ class Transform2D:
         ty = a_to[1] - m10 * a_from[0] - m11 * a_from[1]
 
         return Transform2D([[m00, m01, tx], [m10, m11, ty], [0.0, 0.0, 1.0]])
+
+    def classify(self) -> TransformationClassification:
+        """
+        Analyzes the transformation matrix and returns a machine-readable
+        classification with structured parameters.
+
+        Returns:
+            TransformationClassification object containing the type and parameters
+            of the transformation.
+
+        Example:
+            >>> t = Transform2D.translate(5, 3)
+            >>> result = t.classify()
+            >>> print(result.type)  # "translation"
+            >>> print(result.parameters)  # {"vector": (5.0, 3.0)}
+        """
+        a, b, tx = self.matrix[0][0], self.matrix[0][1], self.matrix[0][2]
+        c, d, ty = self.matrix[1][0], self.matrix[1][1], self.matrix[1][2]
+
+        # Helper for floating point comparisons
+        def is_zero(val):
+            return abs(val) < 1e-6
+
+        def is_equal(v1, v2):
+            return abs(v1 - v2) < 1e-6
+
+        det_R = a * d - b * c
+        det_A = (a - 1) * (d - 1) - b * c
+
+        # Check if the 2x2 submatrix is orthogonal (represents rigid motion)
+        # Conditions: a^2 + c^2 = 1, b^2 + d^2 = 1, dot product (ab + cd) = 0
+        is_orthogonal = (
+            is_equal(a * a + c * c, 1.0)
+            and is_equal(b * b + d * d, 1.0)
+            and is_zero(a * b + c * d)
+        )
+
+        if is_orthogonal:
+            if is_equal(det_R, 1.0):
+                # --- Orientation-Preserving (Identity, Translation, Rotation) ---
+                if is_equal(a, 1.0) and is_equal(d, 1.0) and is_zero(b) and is_zero(c):
+                    if is_zero(tx) and is_zero(ty):
+                        return TransformationClassification(
+                            type="identity",
+                            parameters={}
+                        )
+                    else:
+                        return TransformationClassification(
+                            type="translation",
+                            parameters={"vector": (tx, ty)}
+                        )
+                else:
+                    # It's a rotation. Calculate angle and center.
+                    angle_rad = math.atan2(c, a)
+
+                    # Solve for fixed point: (R - I) * Center = -T
+                    center_x = (-tx * (d - 1) + b * ty) / det_A
+                    center_y = (-ty * (a - 1) + c * tx) / det_A
+
+                    return TransformationClassification(
+                        type="rotation",
+                        parameters={"angle_rad": angle_rad, "pivot": (center_x, center_y)}
+                    )
+
+            elif is_equal(det_R, -1.0):
+                # --- Orientation-Reversing (Reflection, Glide Reflection) ---
+                # Shortcut: A reflection applied twice gives Identity.
+                # A glide reflection applied twice gives a pure translation.
+                squared = self.compose(self)
+                t2x, t2y = squared.matrix[0][2], squared.matrix[1][2]
+
+                # Calculate axis direction vector (eigenvector for lambda = 1)
+                if not is_zero(b):
+                    vx, vy = -b, a - 1
+                elif not is_zero(c):
+                    vx, vy = d - 1, -c
+                else:
+                    vx, vy = (1.0, 0.0) if a > 0 else (0.0, 1.0)
+
+                # Normalize the direction vector
+                mag = math.hypot(vx, vy)
+                vx, vy = vx / mag, vy / mag
+
+                # One point on the line is the midpoint of the origin's transformation
+                mid_x, mid_y = tx / 2.0, ty / 2.0
+
+                # Compute line equation: a*x + b*y + c = 0
+                # Normal vector: (-vy, vx) perpendicular to direction (vx, vy)
+                line_a = -vy
+                line_b = vx
+                line_c = vy * mid_x - vx * mid_y
+
+                if is_zero(t2x) and is_zero(t2y):
+                    return TransformationClassification(
+                        type="reflection",
+                        parameters={
+                            "axis_point": (mid_x, mid_y),
+                            "axis_direction": (vx, vy),
+                            "line_equation": (line_a, line_b, line_c)
+                        }
+                    )
+                else:
+                    # The glide vector is exactly half of the double-translation
+                    gx, gy = t2x / 2.0, t2y / 2.0
+                    return TransformationClassification(
+                        type="glide_reflection",
+                        parameters={
+                            "axis_point": (mid_x, mid_y),
+                            "axis_direction": (vx, vy),
+                            "glide_vector": (gx, gy),
+                            "line_equation": (line_a, line_b, line_c)
+                        }
+                    )
+
+        # --- Non-Rigid Transformations ---
+        if is_zero(b) and is_zero(c):
+            if is_equal(a, d):
+                return TransformationClassification(
+                    type="uniform_scaling",
+                    parameters={"factor": a, "translation": (tx, ty)}
+                )
+            else:
+                return TransformationClassification(
+                    type="non_uniform_scaling",
+                    parameters={"x_factor": a, "y_factor": d, "translation": (tx, ty)}
+                )
+
+        return TransformationClassification(
+            type="complex_affine",
+            parameters={"matrix": [[a, b, tx], [c, d, ty]]}
+        )
+
+    def identify(self) -> str:
+        """
+        Analyzes the transformation matrix and returns a human-readable
+        string identifying the geometric transformation.
+
+        Returns:
+            A human-readable string describing the transformation.
+
+        Example:
+            >>> t = Transform2D.rotate(math.pi/2, 0, 0)
+            >>> print(t.identify())  # "Rotation by 90.00° around pivot (0.0000, 0.0000)"
+        """
+        classification = self.classify()
+        params = classification.parameters
+
+        if classification.type == "identity":
+            return "Identity"
+
+        elif classification.type == "translation":
+            tx, ty = params["vector"]
+            return f"Pure Translation by vector ({tx:.4f}, {ty:.4f})"
+
+        elif classification.type == "rotation":
+            angle_rad = params["angle_rad"]
+            angle_deg = math.degrees(angle_rad)
+            # Normalize angle to [0, 360)
+            if angle_deg < 0:
+                angle_deg += 360
+            cx, cy = params["pivot"]
+            return f"Rotation by {angle_deg:.2f}° around pivot ({cx:.4f}, {cy:.4f})"
+
+        elif classification.type == "reflection":
+            px, py = params["axis_point"]
+            vx, vy = params["axis_direction"]
+            axis_info = f"passing through ({px:.4f}, {py:.4f}) with direction ({vx:.4f}, {vy:.4f})"
+            return f"Pure Reflection across axis {axis_info}"
+
+        elif classification.type == "glide_reflection":
+            px, py = params["axis_point"]
+            vx, vy = params["axis_direction"]
+            gx, gy = params["glide_vector"]
+            axis_info = f"passing through ({px:.4f}, {py:.4f}) with direction ({vx:.4f}, {vy:.4f})"
+            return f"Glide Reflection across axis {axis_info}, gliding by ({gx:.4f}, {gy:.4f})"
+
+        elif classification.type == "uniform_scaling":
+            factor = params["factor"]
+            return f"Uniform Scaling by factor {factor:.4f}"
+
+        elif classification.type == "non_uniform_scaling":
+            x_factor = params["x_factor"]
+            y_factor = params["y_factor"]
+            return f"Non-uniform Scaling by factors (X: {x_factor:.4f}, Y: {y_factor:.4f})"
+
+        else:  # complex_affine
+            return "Complex Affine (Combination of Shear/Scale/Rotation)"
 
     def __repr__(self):
         """String representation for debugging."""
