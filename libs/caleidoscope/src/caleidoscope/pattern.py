@@ -29,7 +29,7 @@ class Pattern:
 
     def __init__(self,
                  vertices: list[tuple[float, float]],
-                 edges: list[tuple[int, int]],
+                 edges: list[tuple[int, int] | tuple[int, int, str]],
                  center: tuple[float, float],
                  tolerance: float,
                  identifications: list[tuple[tuple[int, int], tuple[int, int], bool]]
@@ -39,7 +39,8 @@ class Pattern:
 
         Args:
             vertices: List of vertex coordinates as tuples (x, y) defining the fundamental tile.
-            edges: List of edge tuples (v1_index, v2_index) connecting vertices.
+            edges: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
+                  connecting vertices. The optional third element is a string annotation for the edge.
             center: Tuple (x, y) representing the center point of the fundamental tile.
             tolerance: Maximum distance for considering tile centers as duplicates.
             identifications: List of tuples ((from_v1, from_v2), (to_v1, to_v2), keep_orientation)

@@ -6,18 +6,23 @@ for geometric patterns.
 """
 
 
-def _get_tikz_edges(points: list[tuple[float, float]], lines: list[tuple[int, int]]) -> str:
+def _get_tikz_edges(points: list[tuple[float, float]], lines: list[tuple[int, int] | tuple[int, int, str]]) -> str:
     """
     Create a TikZ representation of lines connecting the given points.
 
     Args:
         points: List of vertex coordinates as tuples (x, y).
-        lines: List of edge tuples (v1_index, v2_index) connecting vertices.
+        lines: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
+              connecting vertices. Annotations are currently ignored.
 
     Returns:
         A string containing the TikZ code for the edges.
     """
-    return "".join(f"  \\draw ({points[p1][0]:.3f}, {points[p1][1]:.3f}) -- ({points[p2][0]:.3f}, {points[p2][1]:.3f});\n" for p1, p2 in lines)
+    result = []
+    for edge in lines:
+        p1, p2 = edge[0], edge[1]
+        result.append(f"  \\draw ({points[p1][0]:.3f}, {points[p1][1]:.3f}) -- ({points[p2][0]:.3f}, {points[p2][1]:.3f});\n")
+    return "".join(result)
 
 
 class TikzRenderer:
@@ -63,14 +68,15 @@ class TikzRenderer:
     def render_tile(
         self,
         vertices: list[tuple[float, float]],
-        edges: list[tuple[int, int]]
+        edges: list[tuple[int, int] | tuple[int, int, str]]
     ) -> None:
         """
         Render a single tile as TikZ draw commands.
 
         Args:
             vertices: List of vertex coordinates as tuples (x, y).
-            edges: List of edge tuples (v1_index, v2_index) connecting vertices.
+            edges: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
+                  connecting vertices. Annotations are currently ignored in TikZ output.
         """
         self._buffer.append(_get_tikz_edges(vertices, edges))
 

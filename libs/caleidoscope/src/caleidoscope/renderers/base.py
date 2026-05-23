@@ -44,7 +44,7 @@ class Renderer(Protocol):
     def render_tile(
         self,
         vertices: list[tuple[float, float]],
-        edges: list[tuple[int, int]]
+        edges: list[tuple[int, int] | tuple[int, int, str]]
     ) -> None:
         """
         Render a single tile.
@@ -54,7 +54,8 @@ class Renderer(Protocol):
 
         Args:
             vertices: List of vertex coordinates as tuples (x, y).
-            edges: List of edge tuples (v1_index, v2_index) connecting vertices.
+            edges: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
+                  connecting vertices. The optional third element is a string annotation for the edge.
         """
         ...
 
