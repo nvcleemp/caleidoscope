@@ -6,7 +6,10 @@ for geometric patterns.
 """
 
 
-def _get_tikz_edges(points: list[tuple[float, float]], lines: list[tuple[int, int] | tuple[int, int, str]]) -> str:
+def _get_tikz_edges(
+        points: list[tuple[float, float]],
+        lines: list[tuple[int, int] | tuple[int, int, str]],
+        annotation_styles: dict[str, str]) -> str:
     """
     Create a TikZ representation of lines connecting the given points.
 
@@ -14,14 +17,20 @@ def _get_tikz_edges(points: list[tuple[float, float]], lines: list[tuple[int, in
         points: List of vertex coordinates as tuples (x, y).
         lines: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
               connecting vertices. Annotations are currently ignored.
+        annotation_styles: A dictionary mapping annotation strings to TikZ styles.
 
     Returns:
         A string containing the TikZ code for the edges.
     """
     result = []
     for edge in lines:
-        p1, p2 = edge[0], edge[1]
-        result.append(f"  \\draw ({points[p1][0]:.3f}, {points[p1][1]:.3f}) -- ({points[p2][0]:.3f}, {points[p2][1]:.3f});\n")
+        if len(edge) == 3:
+            p1, p2, annotation = edge
+            style = annotation_styles.get(annotation, "")
+            result.append(f"  \\draw[{style}] ({points[p1][0]:.3f}, {points[p1][1]:.3f}) -- ({points[p2][0]:.3f}, {points[p2][1]:.3f});\n")
+        else:
+            p1, p2 = edge[0], edge[1]
+            result.append(f"  \\draw ({points[p1][0]:.3f}, {points[p1][1]:.3f}) -- ({points[p2][0]:.3f}, {points[p2][1]:.3f});\n")
     return "".join(result)
 
 
@@ -33,9 +42,10 @@ class TikzRenderer:
     wrapped in a tikzpicture environment or standalone document.
     """
 
-    def __init__(self):
+    def __init__(self, annotation_styles: dict[str, str] | None = None):
         """Initialize the TikZ renderer."""
         self._buffer: list[str] = []
+        self._annotation_styles = annotation_styles or {}
 
     def initialize(self,
         center_x: float = 0,
@@ -78,7 +88,7 @@ class TikzRenderer:
             edges: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
                   connecting vertices. Annotations are currently ignored in TikZ output.
         """
-        self._buffer.append(_get_tikz_edges(vertices, edges))
+        self._buffer.append(_get_tikz_edges(vertices, edges, self._annotation_styles))
 
     def finalize(self) -> str:
         """
