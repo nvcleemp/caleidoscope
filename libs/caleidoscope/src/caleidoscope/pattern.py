@@ -116,6 +116,7 @@ class Pattern:
 
         # Add fundamental tile
         renderer.render_tile(self.vertices, self.edges)
+        quadtree.insert(self.center, tolerance=self.tolerance)
 
         # Initialize queue with generators
         queue = [g for g in self.generators]
