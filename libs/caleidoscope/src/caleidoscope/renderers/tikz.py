@@ -71,8 +71,8 @@ class TikzRenderer:
         max_y = center_y + half_height
         # Add bounding box with 1-unit padding
         self._buffer.append(
-            f"  \\useasboundingbox ({min_x - 1},{min_y - 1}) "
-            f"rectangle ({max_x + 1},{max_y + 1});\n"
+            f"  \\useasboundingbox ({min_x + 1},{min_y + 1}) "
+            f"rectangle ({max_x - 1},{max_y - 1});\n"
         )
 
     def render_tile(
