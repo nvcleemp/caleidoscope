@@ -82,7 +82,7 @@ class TikzRenderer:
     def render_tile(
             self,
             tile: "Tile",
-            edge_filter: Callable[[tuple[int, int, str]], bool] | None = None
+            edge_filter: Callable[[tuple[int, int, str], "Tile"], bool] | None = None
         ) -> None:
         """
         Render a single tile as TikZ draw commands.
@@ -93,7 +93,7 @@ class TikzRenderer:
                          the callable returns True will be rendered. If None, all edges are rendered.
         """
         if edge_filter is not None:
-            filtered_edges = tuple(edge for edge in tile.edges if edge_filter(edge))
+            filtered_edges = tuple(edge for edge in tile.edges if edge_filter(edge, tile))
             self._buffer.append(_get_tikz_edges(tile.vertices, filtered_edges, self._annotation_styles))
         else:
             self._buffer.append(_get_tikz_edges(tile.vertices, tile.edges, self._annotation_styles))

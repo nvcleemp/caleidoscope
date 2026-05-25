@@ -143,7 +143,7 @@ class ConstructedPattern:
     def render(
         self,
         renderer: Renderer,
-        edge_filter: Callable[[tuple[int, int, str]], bool] | None = None
+        edge_filter: Callable[[tuple[int, int, str], Tile], bool] | None = None
     ) -> Any:
         """
         Render the constructed pattern using the given renderer.
@@ -155,9 +155,9 @@ class ConstructedPattern:
             renderer: A renderer object implementing the Renderer protocol.
                      The renderer handles format-specific rendering logic.
             edge_filter: Optional predicate function to filter edges.
-                        If provided, only edges for which edge_filter(edge) returns True
+                        If provided, only edges for which edge_filter(edge, tile) returns True
                         will be rendered. If None, all edges are rendered.
-                        Example: lambda edge: len(edge) == 3 and edge[2] == "s0"
+                        Example: lambda edge, tile: len(edge) == 3 and edge[2] == "s0"
 
         Returns:
             The rendered output, as determined by renderer.finalize().
