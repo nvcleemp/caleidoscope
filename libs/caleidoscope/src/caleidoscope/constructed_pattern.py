@@ -34,14 +34,14 @@ class Tile:
                           Empty tuple () for the fundamental tile.
     """
     vertices: tuple[tuple[float, float], ...]
-    edges: tuple[tuple[int, int] | tuple[int, int, str], ...]
+    edges: tuple[tuple[int, int, str], ...]
     transformation: Transform2D
     generator_sequence: tuple[int, ...]
 
     def __init__(
         self,
         vertices: list[tuple[float, float]],
-        edges: list[tuple[int, int] | tuple[int, int, str]],
+        edges: list[tuple[int, int, str]],
         transformation: Transform2D,
         generator_sequence: tuple[int, ...]
     ):
@@ -50,7 +50,7 @@ class Tile:
 
         Args:
             vertices: List of vertex coordinates as tuples (x, y).
-            edges: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation).
+            edges: List of edge tuples (v1_index, v2_index, annotation) connecting vertices.
             transformation: The affine transformation applied to create this tile.
             generator_sequence: Tuple of generator indices representing the composition sequence.
         """
@@ -143,7 +143,7 @@ class ConstructedPattern:
     def render(
         self,
         renderer: Renderer,
-        edge_filter: Callable[[tuple[int, int] | tuple[int, int, str]], bool] | None = None
+        edge_filter: Callable[[tuple[int, int, str]], bool] | None = None
     ) -> Any:
         """
         Render the constructed pattern using the given renderer.

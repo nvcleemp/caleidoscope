@@ -47,16 +47,20 @@ class Renderer(Protocol):
     def render_tile(
         self,
         tile: "Tile",
-        edge_filter: Callable[[tuple[int, int] | tuple[int, int, str]], bool] | None = None
+        edge_filter: Callable[[tuple[int, int, str]], bool] | None = None
     ) -> None:
         """
         Render a single tile.
-
+    
         This method is called once for each tile in the pattern.
         The vertices are already transformed to their final position.
 
         Args:
             tile: A Tile object representing the tile to be rendered.
+            edge_filter: Optional predicate function to filter edges.
+                        If provided, only edges for which edge_filter(edge) returns True
+                        will be rendered. If None, all edges are rendered.
+                        Example: lambda edge: len(edge) == 3 and edge[2] == "s0"
         """
         ...
 

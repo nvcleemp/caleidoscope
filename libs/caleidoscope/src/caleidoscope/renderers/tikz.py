@@ -16,15 +16,15 @@ if TYPE_CHECKING:
 
 def _get_tikz_edges(
         points: tuple[tuple[float, float], ...],
-        lines: tuple[tuple[int, int] | tuple[int, int, str], ...],
+        lines: tuple[tuple[int, int, str], ...],
         annotation_styles: dict[str, str]) -> str:
     """
     Create a TikZ representation of lines connecting the given points.
 
     Args:
         points: Tuple of vertex coordinates as tuples (x, y).
-        lines: Tuple of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
-              connecting vertices. Annotations are currently ignored.
+        lines: Tuple of edge tuples (v1_index, v2_index, annotation) connecting vertices.
+               Annotations are currently ignored.
         annotation_styles: A dictionary mapping annotation strings to TikZ styles.
 
     Returns:
@@ -32,13 +32,9 @@ def _get_tikz_edges(
     """
     result = []
     for edge in lines:
-        if len(edge) == 3:
-            p1, p2, annotation = edge
-            style = annotation_styles.get(annotation, "")
-            result.append(f"  \\draw[{style}] ({points[p1][0]:.3f}, {points[p1][1]:.3f}) -- ({points[p2][0]:.3f}, {points[p2][1]:.3f});\n")
-        else:
-            p1, p2 = edge[0], edge[1]
-            result.append(f"  \\draw ({points[p1][0]:.3f}, {points[p1][1]:.3f}) -- ({points[p2][0]:.3f}, {points[p2][1]:.3f});\n")
+        p1, p2, annotation = edge
+        style = annotation_styles.get(annotation, "")
+        result.append(f"  \\draw[{style}] ({points[p1][0]:.3f}, {points[p1][1]:.3f}) -- ({points[p2][0]:.3f}, {points[p2][1]:.3f});\n")
     return "".join(result)
 
 
@@ -86,7 +82,7 @@ class TikzRenderer:
     def render_tile(
             self,
             tile: "Tile",
-            edge_filter: Callable[[tuple[int, int] | tuple[int, int, str]], bool] | None = None
+            edge_filter: Callable[[tuple[int, int, str]], bool] | None = None
         ) -> None:
         """
         Render a single tile as TikZ draw commands.
