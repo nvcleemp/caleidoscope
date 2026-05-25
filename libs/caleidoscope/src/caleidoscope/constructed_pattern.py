@@ -174,14 +174,6 @@ class ConstructedPattern:
 
         # Render each tile
         for tile in self._tiles:
-            # Apply edge filter if provided
-            if edge_filter is not None:
-                filtered_edges = [edge for edge in tile.edges if edge_filter(edge)]
-            else:
-                filtered_edges = list(tile.edges)
-
-            # Only render the tile if it has edges (after filtering)
-            if filtered_edges:
-                renderer.render_tile(list(tile.vertices), filtered_edges)
+            renderer.render_tile(tile, edge_filter=edge_filter)
 
         return renderer.finalize()

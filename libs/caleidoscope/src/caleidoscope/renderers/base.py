@@ -4,7 +4,10 @@ Base renderer protocol for the Caleidoscope project.
 This module defines the interface that all renderers must implement
 to work with the Pattern class.
 """
-from typing import Protocol, Any
+from typing import Callable, Protocol, Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..constructed_pattern import Tile
 
 
 class Renderer(Protocol):
@@ -43,8 +46,8 @@ class Renderer(Protocol):
 
     def render_tile(
         self,
-        vertices: list[tuple[float, float]],
-        edges: list[tuple[int, int] | tuple[int, int, str]]
+        tile: "Tile",
+        edge_filter: Callable[[tuple[int, int] | tuple[int, int, str]], bool] | None = None
     ) -> None:
         """
         Render a single tile.
@@ -53,9 +56,7 @@ class Renderer(Protocol):
         The vertices are already transformed to their final position.
 
         Args:
-            vertices: List of vertex coordinates as tuples (x, y).
-            edges: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
-                  connecting vertices. The optional third element is a string annotation for the edge.
+            tile: A Tile object representing the tile to be rendered.
         """
         ...
 

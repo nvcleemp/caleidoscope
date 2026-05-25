@@ -6,16 +6,24 @@ for geometric patterns.
 """
 
 
+from collections.abc import Callable
+
+from typing import Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..constructed_pattern import Tile
+
+
 def _get_tikz_edges(
-        points: list[tuple[float, float]],
-        lines: list[tuple[int, int] | tuple[int, int, str]],
+        points: tuple[tuple[float, float], ...],
+        lines: tuple[tuple[int, int] | tuple[int, int, str], ...],
         annotation_styles: dict[str, str]) -> str:
     """
     Create a TikZ representation of lines connecting the given points.
 
     Args:
-        points: List of vertex coordinates as tuples (x, y).
-        lines: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
+        points: Tuple of vertex coordinates as tuples (x, y).
+        lines: Tuple of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
               connecting vertices. Annotations are currently ignored.
         annotation_styles: A dictionary mapping annotation strings to TikZ styles.
 
@@ -76,19 +84,23 @@ class TikzRenderer:
         )
 
     def render_tile(
-        self,
-        vertices: list[tuple[float, float]],
-        edges: list[tuple[int, int] | tuple[int, int, str]]
-    ) -> None:
+            self,
+            tile: "Tile",
+            edge_filter: Callable[[tuple[int, int] | tuple[int, int, str]], bool] | None = None
+        ) -> None:
         """
         Render a single tile as TikZ draw commands.
 
         Args:
-            vertices: List of vertex coordinates as tuples (x, y).
-            edges: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
-                  connecting vertices. Annotations are currently ignored in TikZ output.
+            tile: A Tile object representing the tile to be rendered.
+            edge_filter: An optional callable to filter edges. Only edges for which
+                         the callable returns True will be rendered. If None, all edges are rendered.
         """
-        self._buffer.append(_get_tikz_edges(vertices, edges, self._annotation_styles))
+        if edge_filter is not None:
+            filtered_edges = tuple(edge for edge in tile.edges if edge_filter(edge))
+            self._buffer.append(_get_tikz_edges(tile.vertices, filtered_edges, self._annotation_styles))
+        else:
+            self._buffer.append(_get_tikz_edges(tile.vertices, tile.edges, self._annotation_styles))
 
     def finalize(self) -> str:
         """
