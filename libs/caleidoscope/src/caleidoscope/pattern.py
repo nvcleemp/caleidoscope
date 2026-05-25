@@ -5,6 +5,7 @@ from typing import Any
 from .affinetransformation import Transform2D
 from .quadtree import QuadTree, Boundary
 from .renderers import Renderer
+from .constructed_pattern import ConstructedPattern, Tile
 
 
 # ============================================================================
@@ -77,6 +78,64 @@ class Pattern:
             ]
         return self._generators
 
+    def construct(
+        self,
+        center_x: float = 0,
+        center_y: float = 0,
+        width: float = 10,
+        height: float = 10
+    ) -> ConstructedPattern:
+        """
+        Construct the pattern within a specified boundary.
+
+        Uses a queue-based algorithm with QuadTree duplicate detection to
+        generate tiles by composing transformations. The algorithm starts
+        with the fundamental tile and iteratively applies generators to
+        create new tiles until the boundary is filled.
+
+        The tiles are stored in a ConstructedPattern object that can be
+        rendered multiple times with different renderers or filters.
+
+        Args:
+            center_x: X-coordinate of the center of the rendering region.
+            center_y: Y-coordinate of the center of the rendering region.
+            width: Width of the rendering region.
+            height: Height of the rendering region.
+
+        Returns:
+            A ConstructedPattern object containing all tiles within the boundary.
+        """
+        boundary = Boundary(center_x, center_y, width / 2, height / 2)
+
+        # Create QuadTree for duplicate detection
+        quadtree = QuadTree(boundary)
+
+        # List to store all tiles
+        tiles: list[Tile] = []
+
+        # Add fundamental tile
+        tiles.append(Tile(self.vertices, self.edges))
+        quadtree.insert(self.center, tolerance=self.tolerance)
+
+        # Initialize queue with generators
+        queue = [g for g in self.generators]
+
+        # Process queue: apply transforms and add tiles
+        while queue:
+            transform = queue.pop(0)
+            transformed_center = transform.apply(self.center)
+
+            # Check if this tile position is new (within tolerance)
+            if quadtree.insert(transformed_center, tolerance=self.tolerance):
+                # Transform vertices and create tile
+                transformed_vertices = [transform.apply(v) for v in self.vertices]
+                tiles.append(Tile(transformed_vertices, self.edges))
+
+                # Compose with generators and add to queue
+                queue += [transform.compose(g) for g in self.generators]
+
+        return ConstructedPattern(tiles, center_x, center_y, width, height)
+
     def render(
         self,
         renderer: Renderer,
@@ -88,10 +147,10 @@ class Pattern:
         """
         Render the pattern within a specified boundary using the given renderer.
 
-        Uses a queue-based algorithm with QuadTree duplicate detection to
-        generate tiles by composing transformations. The algorithm starts
-        with the fundamental tile and iteratively applies generators to
-        create new tiles until the boundary is filled.
+        This is a convenience method that constructs the pattern and immediately
+        renders it. For more control (e.g., rendering the same pattern multiple
+        times with different filters), use construct() to get a ConstructedPattern
+        object and call its render() method.
 
         Args:
             renderer: A renderer object implementing the Renderer protocol.
@@ -106,33 +165,8 @@ class Pattern:
             Typically a string for text formats (TikZ, SVG) or an image
             object for raster formats (PNG).
         """
-        boundary = Boundary(center_x, center_y, width / 2, height / 2)
-
-        # Initialize renderer
-        renderer.initialize(center_x=center_x, center_y=center_y, width=width, height=height)
-
-        # Create QuadTree for duplicate detection
-        quadtree = QuadTree(boundary)
-
-        # Add fundamental tile
-        renderer.render_tile(self.vertices, self.edges)
-        quadtree.insert(self.center, tolerance=self.tolerance)
-
-        # Initialize queue with generators
-        queue = [g for g in self.generators]
-
-        # Process queue: apply transforms and add tiles
-        while queue:
-            transform = queue.pop(0)
-            transformed_center = transform.apply(self.center)
-
-            # Check if this tile position is new (within tolerance)
-            if quadtree.insert(transformed_center, tolerance=self.tolerance):
-                # Transform vertices and render tile
-                transformed_vertices = [transform.apply(v) for v in self.vertices]
-                renderer.render_tile(transformed_vertices, self.edges)
-
-                # Compose with generators and add to queue
-                queue += [transform.compose(g) for g in self.generators]
-
-        return renderer.finalize()
+        # Construct the pattern
+        constructed = self.construct(center_x, center_y, width, height)
+        
+        # Render it
+        return constructed.render(renderer)
