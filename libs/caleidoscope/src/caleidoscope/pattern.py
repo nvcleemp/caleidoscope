@@ -113,26 +113,31 @@ class Pattern:
         # List to store all tiles
         tiles: list[Tile] = []
 
-        # Add fundamental tile
-        tiles.append(Tile(self.vertices, self.edges))
+        # Add fundamental tile with identity transformation and empty generator sequence
+        identity = Transform2D()  # Identity transformation
+        tiles.append(Tile(self.vertices, self.edges, identity, ()))
         quadtree.insert(self.center, tolerance=self.tolerance)
 
-        # Initialize queue with generators
-        queue = [g for g in self.generators]
+        # Initialize queue with generators and their indices
+        # Each queue item is (transformation, generator_sequence)
+        queue: list[tuple[Transform2D, tuple[int, ...]]] = [
+            (g, (i,)) for i, g in enumerate(self.generators)
+        ]
 
         # Process queue: apply transforms and add tiles
         while queue:
-            transform = queue.pop(0)
+            transform, gen_sequence = queue.pop(0)
             transformed_center = transform.apply(self.center)
 
             # Check if this tile position is new (within tolerance)
             if quadtree.insert(transformed_center, tolerance=self.tolerance):
                 # Transform vertices and create tile
                 transformed_vertices = [transform.apply(v) for v in self.vertices]
-                tiles.append(Tile(transformed_vertices, self.edges))
+                tiles.append(Tile(transformed_vertices, self.edges, transform, gen_sequence))
 
                 # Compose with generators and add to queue
-                queue += [transform.compose(g) for g in self.generators]
+                for i, g in enumerate(self.generators):
+                    queue.append((transform.compose(g), gen_sequence + (i,)))
 
         return ConstructedPattern(tiles, center_x, center_y, width, height)
 

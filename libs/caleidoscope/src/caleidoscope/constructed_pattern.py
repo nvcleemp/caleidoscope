@@ -8,6 +8,7 @@ different filters or styles.
 from dataclasses import dataclass
 from typing import Callable, Any
 from .renderers import Renderer
+from .affinetransformation import Transform2D
 
 
 # ============================================================================
@@ -20,21 +21,29 @@ class Tile:
     """
     Represents a single tile in a constructed pattern.
 
-    A tile consists of vertices (transformed to their final position)
-    and edges connecting those vertices.
+    A tile consists of vertices (transformed to their final position),
+    edges connecting those vertices, and metadata about how it was constructed.
 
     Attributes:
         vertices: List of vertex coordinates as tuples (x, y).
         edges: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
               connecting vertices. The optional third element is a string annotation for the edge.
+        transformation: The affine transformation applied to the fundamental tile to create this tile.
+        generator_sequence: Tuple of generator indices (0-indexed) representing the sequence of
+                          generators that were composed to create the transformation.
+                          Empty tuple () for the fundamental tile.
     """
     vertices: tuple[tuple[float, float], ...]
     edges: tuple[tuple[int, int] | tuple[int, int, str], ...]
+    transformation: Transform2D
+    generator_sequence: tuple[int, ...]
 
     def __init__(
         self,
         vertices: list[tuple[float, float]],
-        edges: list[tuple[int, int] | tuple[int, int, str]]
+        edges: list[tuple[int, int] | tuple[int, int, str]],
+        transformation: Transform2D,
+        generator_sequence: tuple[int, ...]
     ):
         """
         Initialize a Tile.
@@ -42,10 +51,33 @@ class Tile:
         Args:
             vertices: List of vertex coordinates as tuples (x, y).
             edges: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation).
+            transformation: The affine transformation applied to create this tile.
+            generator_sequence: Tuple of generator indices representing the composition sequence.
         """
         # Convert to tuples for immutability
         object.__setattr__(self, 'vertices', tuple(vertices))
         object.__setattr__(self, 'edges', tuple(edges))
+        object.__setattr__(self, 'transformation', transformation)
+        object.__setattr__(self, 'generator_sequence', generator_sequence)
+
+    def format_generator_sequence(self) -> str:
+        """
+        Format the generator sequence in a human-readable way.
+
+        Returns:
+            A string representation of the generator sequence.
+            For empty sequence (fundamental tile): "identity"
+            For sequence (0, 1, 2): "g0 ∘ g1 ∘ g2"
+        
+        Example:
+            >>> tile.generator_sequence
+            (0, 1, 2)
+            >>> tile.format_generator_sequence()
+            'g0 ∘ g1 ∘ g2'
+        """
+        if not self.generator_sequence:
+            return "identity"
+        return " ∘ ".join(f"g{i}" for i in self.generator_sequence)
 
 
 # ============================================================================
