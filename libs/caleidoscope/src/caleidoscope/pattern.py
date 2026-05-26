@@ -31,6 +31,7 @@ class Pattern:
     def __init__(self,
                  vertices: list[tuple[float, float]],
                  edges: list[tuple[int, int, str]],
+                 polygons: list[tuple[list[int], str]],
                  center: tuple[float, float],
                  tolerance: float,
                  identifications: list[tuple[tuple[int, int], tuple[int, int], bool]]
@@ -42,6 +43,8 @@ class Pattern:
             vertices: List of vertex coordinates as tuples (x, y) defining the fundamental tile.
             edges: List of edge tuples (v1_index, v2_index, annotation) connecting vertices.
                    The third element is a string annotation for the edge.
+            polygons: List of polygon tuples (vertex_indices, annotation) defining the polygons of the tile.
+                      The first element is a list of vertex indices, and the second element is a string annotation.
             center: Tuple (x, y) representing the center point of the fundamental tile.
             tolerance: Maximum distance for considering tile centers as duplicates.
             identifications: List of tuples ((from_v1, from_v2), (to_v1, to_v2), keep_orientation)
@@ -49,6 +52,7 @@ class Pattern:
         """
         self.vertices = vertices
         self.edges = edges
+        self.polygons = polygons
         self.center = center
         self.tolerance = tolerance
         self.identifications = identifications
@@ -115,7 +119,7 @@ class Pattern:
 
         # Add fundamental tile with identity transformation and empty generator sequence
         identity = Transform2D()  # Identity transformation
-        tiles.append(Tile(self.vertices, self.edges, identity, ()))
+        tiles.append(Tile(self.vertices, self.edges, self.polygons, identity, ()))
         quadtree.insert(self.center, tolerance=self.tolerance)
 
         # Initialize queue with generators and their indices
@@ -133,7 +137,7 @@ class Pattern:
             if quadtree.insert(transformed_center, tolerance=self.tolerance):
                 # Transform vertices and create tile
                 transformed_vertices = [transform.apply(v) for v in self.vertices]
-                tiles.append(Tile(transformed_vertices, self.edges, transform, gen_sequence))
+                tiles.append(Tile(transformed_vertices, self.edges, self.polygons, transform, gen_sequence))
 
                 # Compose with generators and add to queue
                 for i, g in enumerate(self.generators):

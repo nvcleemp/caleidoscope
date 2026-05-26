@@ -28,6 +28,8 @@ class Tile:
         vertices: List of vertex coordinates as tuples (x, y).
         edges: List of edge tuples (v1_index, v2_index) or (v1_index, v2_index, annotation)
               connecting vertices. The optional third element is a string annotation for the edge.
+        polygons: List of polygon tuples (vertex_indices, annotation) defining the polygons of the tile.
+                  The first element is a list of vertex indices, and the second element is a string annotation.
         transformation: The affine transformation applied to the fundamental tile to create this tile.
         generator_sequence: Tuple of generator indices (0-indexed) representing the sequence of
                           generators that were composed to create the transformation.
@@ -35,6 +37,7 @@ class Tile:
     """
     vertices: tuple[tuple[float, float], ...]
     edges: tuple[tuple[int, int, str], ...]
+    polygons: tuple[tuple[tuple[int, ...], str], ...]
     transformation: Transform2D
     generator_sequence: tuple[int, ...]
 
@@ -42,6 +45,7 @@ class Tile:
         self,
         vertices: list[tuple[float, float]],
         edges: list[tuple[int, int, str]],
+        polygons: list[tuple[list[int], str]],
         transformation: Transform2D,
         generator_sequence: tuple[int, ...]
     ):
@@ -51,12 +55,14 @@ class Tile:
         Args:
             vertices: List of vertex coordinates as tuples (x, y).
             edges: List of edge tuples (v1_index, v2_index, annotation) connecting vertices.
+            polygons: List of polygon tuples (vertex_indices, annotation) defining the polygons of the tile.
             transformation: The affine transformation applied to create this tile.
             generator_sequence: Tuple of generator indices representing the composition sequence.
         """
         # Convert to tuples for immutability
         object.__setattr__(self, 'vertices', tuple(vertices))
         object.__setattr__(self, 'edges', tuple(edges))
+        object.__setattr__(self, 'polygons', tuple((tuple(p), annotation) for p, annotation in polygons))
         object.__setattr__(self, 'transformation', transformation)
         object.__setattr__(self, 'generator_sequence', generator_sequence)
 
