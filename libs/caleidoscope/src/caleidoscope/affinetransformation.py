@@ -199,6 +199,61 @@ class Transform2D:
         return Transform2D([[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]])
 
     @staticmethod
+    def from_orthogonal_scaling(
+        v1: tuple[float, float], 
+        s1: float, 
+        v2: tuple[float, float], 
+        s2: float
+    ) -> "Transform2D":
+        """
+        Create a transformation that scales space along two arbitrary orthogonal vectors.
+
+        Args:
+            v1: The first direction vector as a tuple (x, y).
+            s1: The scaling factor along the v1 direction.
+            v2: The second direction vector as a tuple (x, y).
+            s2: The scaling factor along the v2 direction.
+
+        Returns:
+            A Transform2D object representing the directional scaling.
+
+        Raises:
+            ValueError: If either vector is degenerate (zero length) or 
+                        if the two vectors are not orthogonal.
+        """
+        # 1. Normalize the first vector
+        len1 = math.hypot(v1[0], v1[1])
+        if len1 < 1e-10:
+            raise ValueError("The first vector cannot be a zero vector.")
+        u1x, u1y = v1[0] / len1, v1[1] / len1
+
+        # 2. Normalize the second vector
+        len2 = math.hypot(v2[0], v2[1])
+        if len2 < 1e-10:
+            raise ValueError("The second vector cannot be a zero vector.")
+        u2x, u2y = v2[0] / len2, v2[1] / len2
+
+        # 3. Guardrail: Verify orthogonality via the dot product
+        dot_product = u1x * u2x + u1y * u2y
+        if abs(dot_product) > 1e-6:
+            raise ValueError("The provided vectors are not orthogonal.")
+
+        # 4. Construct the A = P * S * P^T matrix analytically
+        # Column 1 of P is [u1x, u1y], Column 2 is [u2x, u2y]
+        # S is diag(s1, s2)
+        m00 = s1 * u1x * u1x + s2 * u2x * u2x
+        m01 = s1 * u1x * u1y + s2 * u2x * u2y
+        m10 = s1 * u1y * u1x + s2 * u2y * u2x
+        m11 = s1 * u1y * u1y + s2 * u2y * u2y
+
+        # 5. Return the 3x3 homogeneous transformation matrix
+        return Transform2D([
+            [m00, m01, 0.0],
+            [m10, m11, 0.0],
+            [0.0, 0.0, 1.0]
+        ])
+
+    @staticmethod
     def from_two_segments(a1: tuple[float, float], b1: tuple[float, float], a2: tuple[float, float], b2: tuple[float, float], keep_orientation: bool = True) -> "Transform2D":
         """
         Create a transformation that maps segment a1-b1 to segment a2-b2.
