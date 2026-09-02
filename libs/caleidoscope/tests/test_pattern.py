@@ -60,7 +60,7 @@ def test_construct_region_is_forwarded_to_render_boundary() -> None:
                 "height": height,
             }
 
-        def render_tile(self, tile, edge_filter=None) -> None:
+        def render_tile(self, tile, edge_filter=None, polygon_filter=None) -> None:
             pass
 
         def finalize(self):

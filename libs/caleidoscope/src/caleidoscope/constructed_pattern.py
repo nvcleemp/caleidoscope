@@ -149,13 +149,14 @@ class ConstructedPattern:
     def render(
         self,
         renderer: Renderer,
-        edge_filter: Callable[[tuple[int, int, str], Tile], bool] | None = None
+        edge_filter: Callable[[tuple[int, int, str], Tile], bool] | None = None,
+        polygon_filter: Callable[[tuple[tuple[int, ...], str], Tile], bool] | None = None
     ) -> Any:
         """
         Render the constructed pattern using the given renderer.
 
         This method allows rendering the same pattern multiple times with
-        different renderers or edge filters without reconstructing the tiles.
+        different renderers or edge/polygon filters without reconstructing the tiles.
 
         Args:
             renderer: A renderer object implementing the Renderer protocol.
@@ -164,6 +165,10 @@ class ConstructedPattern:
                         If provided, only edges for which edge_filter(edge, tile) returns True
                         will be rendered. If None, all edges are rendered.
                         Example: lambda edge, tile: len(edge) == 3 and edge[2] == "s0"
+            polygon_filter: Optional predicate function to filter polygons.
+                        If provided, only polygons for which polygon_filter(polygon, tile) returns True
+                        will be rendered. If None, all polygons are rendered.
+                        Example: lambda polygon, tile: polygon[1] == "triangle"
 
         Returns:
             The rendered output, as determined by renderer.finalize().
@@ -180,6 +185,6 @@ class ConstructedPattern:
 
         # Render each tile
         for tile in self._tiles:
-            renderer.render_tile(tile, edge_filter=edge_filter)
+            renderer.render_tile(tile, edge_filter=edge_filter, polygon_filter=polygon_filter)
 
         return renderer.finalize()

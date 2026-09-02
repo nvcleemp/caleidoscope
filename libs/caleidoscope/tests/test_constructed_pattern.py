@@ -29,6 +29,26 @@ def constructed_pattern(simple_pattern: Pattern) -> ConstructedPattern:
     return simple_pattern.construct(width=4, height=4)
 
 
+@pytest.fixture
+def pattern_with_polygons() -> Pattern:
+    """A square pattern with a face polygon covering half the square, tiling by translation."""
+    vertices = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    edges = [
+        (0, 1, "s0"),
+        (1, 2, "s1"),
+        (2, 3, "s0"),
+        (3, 0, "s1"),
+    ]
+    polygons = [([0, 1, 2], "tri1"), ([0, 2, 3], "tri2")]
+    center = (0.5, 0.5)
+    tolerance = 0.1
+    identifications = [
+        ((3, 0), (1, 2), True),
+        ((0, 1), (2, 3), True),
+    ]
+    return Pattern(vertices, edges, polygons, center, tolerance, identifications)
+
+
 def test_render_is_backwards_compatible(simple_pattern: Pattern) -> None:
     output = simple_pattern.render(TikzRenderer(), width=4, height=4)
     assert output.count("draw") > 0
@@ -57,6 +77,21 @@ def test_edge_filtering_partitions_all_edges(constructed_pattern: ConstructedPat
     assert draw_count_s0 > 0
     assert draw_count_s1 > 0
     assert draw_count_s0 + draw_count_s1 == draw_count_all
+
+
+def test_polygon_filtering_partitions_all_polygons(pattern_with_polygons: Pattern) -> None:
+    constructed = pattern_with_polygons.construct(width=4, height=4)
+    cycle_count_all = constructed.render(TikzRenderer()).count("cycle")
+
+    filter_tri1 = lambda polygon, _: polygon[1] == "tri1"
+    cycle_count_tri1 = constructed.render(TikzRenderer(), polygon_filter=filter_tri1).count("cycle")
+
+    filter_tri2 = lambda polygon, _: polygon[1] == "tri2"
+    cycle_count_tri2 = constructed.render(TikzRenderer(), polygon_filter=filter_tri2).count("cycle")
+
+    assert cycle_count_tri1 > 0
+    assert cycle_count_tri2 > 0
+    assert cycle_count_tri1 + cycle_count_tri2 == cycle_count_all
 
 
 def test_construct_and_render_matches_direct_render(

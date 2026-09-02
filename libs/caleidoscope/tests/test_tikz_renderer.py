@@ -8,9 +8,12 @@ from caleidoscope import TikzRenderer, Transform2D
 from caleidoscope.constructed_pattern import Tile
 
 
-def _make_tile(edges: list[tuple[int, int, str]]) -> Tile:
+def _make_tile(
+    edges: list[tuple[int, int, str]],
+    polygons: list[tuple[list[int], str]] | None = None,
+) -> Tile:
     vertices = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
-    return Tile(vertices, edges, [], Transform2D(), ())
+    return Tile(vertices, edges, polygons or [], Transform2D(), ())
 
 
 def test_initialize_produces_expected_bounding_box() -> None:
@@ -78,3 +81,51 @@ def test_initialize_resets_buffer_between_uses() -> None:
     renderer.initialize()  # re-initializing should discard the previous tile's output
     output = renderer.finalize()
     assert "draw" not in output
+
+
+def test_render_tile_renders_polygon_with_style() -> None:
+    renderer = TikzRenderer({"face": "blue, fill=blue!20"})
+    renderer.initialize()
+    renderer.render_tile(_make_tile([], polygons=[([0, 1, 2, 3], "face")]))
+    output = renderer.finalize()
+    assert (
+        "\\draw[blue, fill=blue!20] (0.000, 0.000) -- (1.000, 0.000) -- "
+        "(1.000, 1.000) -- (0.000, 1.000) -- cycle;\n"
+    ) in output
+
+
+def test_render_tile_polygon_uses_empty_style_by_default() -> None:
+    renderer = TikzRenderer()
+    renderer.initialize()
+    renderer.render_tile(_make_tile([], polygons=[([0, 1, 2], "")]))
+    output = renderer.finalize()
+    assert "\\draw[] (0.000, 0.000) -- (1.000, 0.000) -- (1.000, 1.000) -- cycle;\n" in output
+
+
+def test_render_tile_polygon_falls_back_to_empty_style_for_unmapped_annotation() -> None:
+    renderer = TikzRenderer({"a": "red"})
+    renderer.initialize()
+    renderer.render_tile(_make_tile([], polygons=[([0, 1, 2], "b")]))
+    output = renderer.finalize()
+    assert "\\draw[] (0.000, 0.000) -- (1.000, 0.000) -- (1.000, 1.000) -- cycle;\n" in output
+
+
+def test_render_tile_with_polygon_filter_renders_only_matching_polygons() -> None:
+    renderer = TikzRenderer()
+    renderer.initialize()
+    tile = _make_tile([], polygons=[([0, 1, 2], "a"), ([0, 2, 3], "b")])
+    renderer.render_tile(tile, polygon_filter=lambda polygon, _: polygon[1] == "a")
+    output = renderer.finalize()
+    assert "(0.000, 0.000) -- (1.000, 0.000) -- (1.000, 1.000) -- cycle" in output
+    assert "(0.000, 0.000) -- (1.000, 1.000) -- (0.000, 1.000) -- cycle" not in output
+
+
+def test_render_tile_draws_polygons_before_edges() -> None:
+    renderer = TikzRenderer()
+    renderer.initialize()
+    tile = _make_tile([(0, 1, "")], polygons=[([0, 1, 2], "")])
+    renderer.render_tile(tile)
+    output = renderer.finalize()
+    polygon_index = output.index("cycle")
+    edge_index = output.index("\\draw[] (0.000, 0.000) -- (1.000, 0.000);\n")
+    assert polygon_index < edge_index

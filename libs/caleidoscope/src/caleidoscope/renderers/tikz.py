@@ -38,6 +38,29 @@ def _get_tikz_edges(
     return "".join(result)
 
 
+def _get_tikz_polygons(
+        points: tuple[tuple[float, float], ...],
+        polygons: tuple[tuple[tuple[int, ...], str], ...],
+        annotation_styles: dict[str, str]) -> str:
+    """
+    Create a TikZ representation of polygons connecting the given points.
+
+    Args:
+        points: Tuple of vertex coordinates as tuples (x, y).
+        polygons: Tuple of polygon tuples (vertex_indices, annotation).
+        annotation_styles: A dictionary mapping annotation strings to TikZ styles.
+
+    Returns:
+        A string containing the TikZ code for the polygons.
+    """
+    result = []
+    for vertex_indices, annotation in polygons:
+        style = annotation_styles.get(annotation, "")
+        path = " -- ".join(f"({points[i][0]:.3f}, {points[i][1]:.3f})" for i in vertex_indices)
+        result.append(f"  \\draw[{style}] {path} -- cycle;\n")
+    return "".join(result)
+
+
 class TikzRenderer:
     """
     Renderer that generates TikZ/LaTeX code for geometric patterns.
@@ -82,16 +105,27 @@ class TikzRenderer:
     def render_tile(
             self,
             tile: "Tile",
-            edge_filter: Callable[[tuple[int, int, str], "Tile"], bool] | None = None
+            edge_filter: Callable[[tuple[int, int, str], "Tile"], bool] | None = None,
+            polygon_filter: Callable[[tuple[tuple[int, ...], str], "Tile"], bool] | None = None
         ) -> None:
         """
         Render a single tile as TikZ draw commands.
+
+        Polygons are drawn before edges, so edge lines are not hidden by polygon fills.
 
         Args:
             tile: A Tile object representing the tile to be rendered.
             edge_filter: An optional callable to filter edges. Only edges for which
                          the callable returns True will be rendered. If None, all edges are rendered.
+            polygon_filter: An optional callable to filter polygons. Only polygons for which
+                            the callable returns True will be rendered. If None, all polygons are rendered.
         """
+        if polygon_filter is not None:
+            filtered_polygons = tuple(polygon for polygon in tile.polygons if polygon_filter(polygon, tile))
+            self._buffer.append(_get_tikz_polygons(tile.vertices, filtered_polygons, self._annotation_styles))
+        else:
+            self._buffer.append(_get_tikz_polygons(tile.vertices, tile.polygons, self._annotation_styles))
+
         if edge_filter is not None:
             filtered_edges = tuple(edge for edge in tile.edges if edge_filter(edge, tile))
             self._buffer.append(_get_tikz_edges(tile.vertices, filtered_edges, self._annotation_styles))
