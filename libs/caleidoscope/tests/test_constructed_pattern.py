@@ -65,3 +65,11 @@ def test_construct_and_render_matches_direct_render(
     old_output = simple_pattern.render(TikzRenderer(), width=4, height=4)
     new_output = constructed_pattern.render(TikzRenderer())
     assert old_output.count("draw") == new_output.count("draw")
+
+
+def test_get_tiles_returns_a_copy(constructed_pattern: ConstructedPattern) -> None:
+    tiles = constructed_pattern.get_tiles()
+    original_count = constructed_pattern.tile_count
+    tiles.clear()
+    assert constructed_pattern.tile_count == original_count
+    assert len(constructed_pattern.get_tiles()) == original_count

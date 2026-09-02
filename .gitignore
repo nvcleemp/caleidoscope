@@ -11,3 +11,6 @@ wheels/
 
 # Generated LaTeX output
 output/
+
+# Coverage data
+.coverage

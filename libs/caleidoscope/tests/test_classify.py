@@ -42,6 +42,16 @@ def test_reflection() -> None:
     assert "line_equation" in result.parameters
 
 
+def test_reflection_across_non_axis_aligned_line() -> None:
+    # Reflection across the line y = x: swaps x and y.
+    t = Transform2D([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])
+    result = t.classify()
+    assert result.type == "reflection"
+    vx, vy = result.parameters["axis_direction"]
+    # The axis direction must be parallel to (1, 1) (the line y = x): vx == vy.
+    assert vx == pytest.approx(vy, abs=1e-6)
+
+
 def test_uniform_scaling() -> None:
     scale_factor = 2.5
     t = Transform2D([[scale_factor, 0.0, 0.0],
