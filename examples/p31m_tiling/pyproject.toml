@@ -1,0 +1,12 @@
+[project]
+name = "p31m-tiling"
+version = "0.1.0"
+description = "Animated p31m wallpaper-group tiling with a deforming fundamental tile"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "caleidoscope",
+]
+
+[tool.uv.sources]
+caleidoscope = { workspace = true }
