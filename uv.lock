@@ -1,12 +1,24 @@
 version = 1
-revision = 3
+revision = 1
 requires-python = ">=3.13"
 
 [manifest]
 members = [
+    "basic-examples",
     "caleidoscope",
     "caleidoscope-group",
 ]
+
+[[package]]
+name = "basic-examples"
+version = "0.1.0"
+source = { virtual = "examples/basic" }
+dependencies = [
+    { name = "caleidoscope" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "caleidoscope", editable = "libs/caleidoscope" }]
 
 [[package]]
 name = "caleidoscope"
@@ -17,6 +29,3 @@ source = { editable = "libs/caleidoscope" }
 name = "caleidoscope-group"
 version = "0.1.0"
 source = { virtual = "." }
-
-[package.metadata]
-requires-dist = [{ name = "caleidoscope", editable = "libs/caleidoscope" }]
