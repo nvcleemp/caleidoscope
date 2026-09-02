@@ -186,10 +186,18 @@ class QuadTreeNode:
             if euclidean_distance(point, existing_point) <= tolerance:
                 return True
 
-        # Recursively check children if not a leaf
+        # Recursively check any child whose boundary comes within `tolerance`
+        # of the point, not just the child that contains the point outright.
+        # A near-duplicate can be stored in an adjacent child just across a
+        # quadrant boundary, so containment alone would miss it.
         if self.children is not None:
+            px, py = point
             for child in self.children:
-                if child.boundary.contains(point):
+                b = child.boundary
+                if (
+                    b.center_x - b.half_width - tolerance <= px <= b.center_x + b.half_width + tolerance
+                    and b.center_y - b.half_height - tolerance <= py <= b.center_y + b.half_height + tolerance
+                ):
                     if child.has_point_within_tolerance(point, tolerance):
                         return True
 
