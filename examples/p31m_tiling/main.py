@@ -192,13 +192,13 @@ def main():
 
     if args.mode in ("tile", "both"):
         content = render_tile_frames(x_values, edges, polygons)
-        path = OUTPUT_DIR / "tile.tex"
+        path = OUTPUT_DIR / "p31m_tile.tex"
         path.write_text(wrap_standalone(content))
         print(f"Wrote {path}")
 
     if args.mode in ("tiling", "both"):
         content = render_tiling_frames(x_values, edges, polygons, identifications)
-        path = OUTPUT_DIR / "tiling.tex"
+        path = OUTPUT_DIR / "p31m_tiling.tex"
         path.write_text(wrap_standalone(content))
         print(f"Wrote {path}")
 
