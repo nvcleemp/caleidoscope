@@ -116,7 +116,7 @@ def render_tiling_frames(x_values, edges, polygons, identifications) -> str:
     """Render each frame as the full periodic tiling."""
     content = ""
     for x in x_values:
-        vertices = quadrangle(x)
+        vertices = [(2 * vx, 2 * vy) for vx, vy in quadrangle(x)]
         bc = barycenter(vertices)
         renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
         tiling = caleidoscope.Pattern(
@@ -132,8 +132,8 @@ def render_tiling_frames(x_values, edges, polygons, identifications) -> str:
                 renderer,
                 center_x=bc[0],
                 center_y=bc[1],
-                width=5,
-                height=5,
+                width=16,
+                height=16,
                 edge_filter=lambda edge, tile: edge[2] != "s2",
                 polygon_filter=None,
             )
@@ -142,8 +142,8 @@ def render_tiling_frames(x_values, edges, polygons, identifications) -> str:
                 renderer,
                 center_x=bc[0],
                 center_y=bc[1],
-                width=5,
-                height=5,
+                width=16,
+                height=16,
                 edge_filter=lambda edge, tile: edge[2] == "s2",
                 polygon_filter=lambda polygon, tile: False,
             )
