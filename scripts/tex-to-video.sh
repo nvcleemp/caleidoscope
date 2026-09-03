@@ -74,8 +74,21 @@ trap 'rm -rf "$workdir"' EXIT
 echo "Exporting pages to PNG at ${dpi}dpi..."
 pdftoppm -png -r "$dpi" "$pdf" "$workdir/frame"
 
+mapfile -t frames < <(find "$workdir" -maxdepth 1 -name 'frame-*.png' | sort)
+concat_list="$workdir/frames.txt"
+{
+    for f in "${frames[@]}"; do
+        printf "file '%s'\n" "$f"
+    done
+    # Play back-and-forth (1..N-1,N,N-1..1) rather than looping straight
+    # from N back to 1, since most video players only loop, not ping-pong.
+    for ((i = ${#frames[@]} - 2; i >= 0; i--)); do
+        printf "file '%s'\n" "${frames[$i]}"
+    done
+} >"$concat_list"
+
 echo "Encoding video at ${fps}fps..."
-ffmpeg -y -framerate "$fps" -pattern_type glob -i "$workdir/frame-*.png" \
+ffmpeg -y -f concat -safe 0 -r "$fps" -i "$concat_list" \
     -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" "$output" \
     -loglevel error
 
