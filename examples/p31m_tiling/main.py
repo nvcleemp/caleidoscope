@@ -134,6 +134,18 @@ def render_tiling_frames(x_values, edges, polygons, identifications) -> str:
                 center_y=bc[1],
                 width=5,
                 height=5,
+                edge_filter=lambda edge, tile: edge[2] != "s2",
+                polygon_filter=None,
+            )
+            + "\n"
+            + tiling.render(
+                renderer,
+                center_x=bc[0],
+                center_y=bc[1],
+                width=5,
+                height=5,
+                edge_filter=lambda edge, tile: edge[2] == "s2",
+                polygon_filter=lambda polygon, tile: False,
             )
         )
     return content
