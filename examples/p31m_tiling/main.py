@@ -19,9 +19,9 @@ ANNOTATION_STYLES = {
     "s0": "green, ultra thin",
     "s1": "red, ultra thin",
     "s2": "black, thick",
-    "triangle": "blue, fill=blue!20",
-    "quadrangle": "purple, fill=purple!20",
-    "triangle2": "orange, fill=orange!20",
+    "triangle": "draw=none, fill=blue!20",
+    "quadrangle": "draw=none, fill=purple!20",
+    "triangle2": "draw=none, fill=orange!20",
 }
 
 
