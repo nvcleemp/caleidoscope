@@ -15,6 +15,12 @@ import caleidoscope
 
 OUTPUT_DIR = Path(__file__).parent / "output"
 
+# Scale factors (in TikZ units per unit of `quadrangle()` output) used so the
+# isolated-tile and isolated-quadrangle frames line up at the same physical
+# size; the full periodic tiling uses a smaller scale to fit multiple tiles.
+TILE_SCALE = 10
+TILING_SCALE = 2
+
 ANNOTATION_STYLES = {
     "s0": "green, ultra thin",
     "s1": "red, ultra thin",
@@ -93,6 +99,37 @@ def quadrangle(x: float):
     return [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10]
 
 
+def render_quadrangle_frames(x_values) -> str:
+    """Render each frame as the isolated base quadrangle, with the angle and
+    side-length annotations used to construct it."""
+    content = "\\usetikzlibrary{calc}\n\n"
+    for x in x_values:
+        p1, p2, p3, p4 = [
+            (TILE_SCALE * vx, TILE_SCALE * vy) for vx, vy in quadrangle(x)[:4]
+        ]
+
+        # Angle (in degrees) of the ray P4->P2, used to place the 120° arc
+        # and label at P4.
+        angle_p4_p2 = math.degrees(math.atan2(p2[1] - p4[1], p2[0] - p4[0]))
+
+        lines = [
+            "  \\useasboundingbox (-4,-2) rectangle (14,8);",
+            "  \\draw "
+            + " -- ".join(f"({vx},{vy})" for vx, vy in (p1, p2, p4, p3))
+            + " -- cycle;",
+            "  \\draw (1,0) arc[start angle=0,end angle=60,radius=1];",
+            "  \\node at (1.1,.7) {60°};",
+            (
+                f"  \\draw ($({p4[0]},{p4[1]}) + ({angle_p4_p2}:1) $) "
+                f"arc[start angle={angle_p4_p2},end angle={angle_p4_p2 - 120},radius=1];"
+            ),
+            f"  \\node at ($({p4[0]},{p4[1]}) + ({angle_p4_p2 - 60}:1.3) $) {{120°}};",
+            f"  \\node at ($({(p1[0] + p3[0]) / 2},{(p1[1] + p3[1]) / 2}) + (120:.2) $) {{$x$}};",
+        ]
+        content += wrap_tikz_picture("\n".join(lines) + "\n")
+    return content
+
+
 def render_tile_frames(x_values, edges, polygons) -> str:
     """Render each frame as the isolated fundamental tile, unfolded."""
     content = ""
@@ -101,7 +138,7 @@ def render_tile_frames(x_values, edges, polygons) -> str:
         renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
         renderer.initialize(center_x=5, center_y=3, width=20, height=12)
         tile = caleidoscope.Tile(
-            [(10 * vx, 10 * vy) for vx, vy in vertices],
+            [(TILE_SCALE * vx, TILE_SCALE * vy) for vx, vy in vertices],
             edges,
             polygons,
             caleidoscope.Transform2D(),
@@ -116,7 +153,7 @@ def render_tiling_frames(x_values, edges, polygons, identifications) -> str:
     """Render each frame as the full periodic tiling."""
     content = ""
     for x in x_values:
-        vertices = [(2 * vx, 2 * vy) for vx, vy in quadrangle(x)]
+        vertices = [(TILING_SCALE * vx, TILING_SCALE * vy) for vx, vy in quadrangle(x)]
         bc = barycenter(vertices)
         renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
         tiling = caleidoscope.Pattern(
@@ -155,7 +192,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--mode",
-        choices=["tile", "tiling", "both"],
+        choices=["tile", "tiling", "both", "quadrangle"],
         default="both",
         help="which output(s) to generate (default: both)",
     )
@@ -211,6 +248,12 @@ def main():
     if args.mode in ("tiling", "both"):
         content = render_tiling_frames(x_values, edges, polygons, identifications)
         path = OUTPUT_DIR / "p31m_tiling.tex"
+        path.write_text(wrap_standalone(content))
+        print(f"Wrote {path}")
+
+    if args.mode == "quadrangle":
+        content = render_quadrangle_frames(x_values)
+        path = OUTPUT_DIR / "p31m_quadrangle.tex"
         path.write_text(wrap_standalone(content))
         print(f"Wrote {path}")
 
