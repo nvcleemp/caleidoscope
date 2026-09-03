@@ -2,6 +2,7 @@
 Pattern generation module for the Caleidoscope project.
 """
 from typing import Any
+from collections.abc import Callable
 from .affinetransformation import Transform2D
 from .quadtree import QuadTree, Boundary
 from .renderers import Renderer
@@ -151,7 +152,9 @@ class Pattern:
         center_x: float = 0,
         center_y: float = 0,
         width: float = 10,
-        height: float = 10
+        height: float = 10,
+        edge_filter: Callable[[tuple[int, int, str], Tile], bool] | None = None,
+        polygon_filter: Callable[[tuple[tuple[int, ...], str], Tile], bool] | None = None
     ) -> Any:
         """
         Render the pattern within a specified boundary using the given renderer.
@@ -168,6 +171,12 @@ class Pattern:
             center_y: Y-coordinate of the center of the rendering region.
             width: Width of the rendering region.
             height: Height of the rendering region.
+            edge_filter: Optional predicate function to filter edges.
+                        If provided, only edges for which edge_filter(edge, tile) returns True
+                        will be rendered. If None, all edges are rendered.
+            polygon_filter: Optional predicate function to filter polygons.
+                        If provided, only polygons for which polygon_filter(polygon, tile) returns True
+                        will be rendered. If None, all polygons are rendered.
 
         Returns:
             The rendered output, as determined by renderer.finalize().
@@ -176,6 +185,6 @@ class Pattern:
         """
         # Construct the pattern
         constructed = self.construct(center_x, center_y, width, height)
-        
+
         # Render it
-        return constructed.render(renderer)
+        return constructed.render(renderer, edge_filter=edge_filter, polygon_filter=polygon_filter)
