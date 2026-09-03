@@ -31,3 +31,18 @@ Run with:
 ```bash
 uv run --package two-tilings python examples/two_tilings/main.py
 ```
+
+## Building videos
+
+Once the `.tex` files above have been generated, turn any of them into an
+`.mp4` (compiling to PDF, rasterizing each page, then encoding with ffmpeg):
+
+```bash
+make videos
+```
+
+This builds an `.mp4` next to each `.tex` file found in `output/`. Override
+the frame rate or rasterization resolution with `FPS`/`DPI`, e.g. `make
+videos FPS=24`. `make clean-videos` removes the generated `.mp4` files. See
+[`scripts/tex-to-video.sh`](../../scripts/tex-to-video.sh) for the underlying
+script, which can also be run directly on a single file.
