@@ -1,0 +1,12 @@
+[project]
+name = "two-tilings"
+version = "0.1.0"
+description = "Animated transition between two pgg-symmetric tilings via a shared midpoint tiling"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "caleidoscope",
+]
+
+[tool.uv.sources]
+caleidoscope = { workspace = true }
