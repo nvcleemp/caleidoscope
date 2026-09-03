@@ -99,7 +99,7 @@ def render_tile_frames(x_values, edges, polygons) -> str:
     for x in x_values:
         vertices = quadrangle(x)
         renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
-        renderer.initialize(center_x=5, center_y=0, width=20, height=18)
+        renderer.initialize(center_x=5, center_y=3, width=20, height=12)
         tile = caleidoscope.Tile(
             [(10 * vx, 10 * vy) for vx, vy in vertices],
             edges,
