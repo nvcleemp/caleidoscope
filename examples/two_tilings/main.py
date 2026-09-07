@@ -45,6 +45,12 @@ def wrap_standalone(content):
 """
 
 
+def write_standalone_tex(path, content):
+    """Write content, wrapped in a standalone document, to path."""
+    with open(path, "w") as f:
+        f.write(wrap_standalone(content))
+
+
 def generate_pgg_symmetries_simple(
     representatives: list[
         caleidoscope.affinetransformation.TransformationClassification
@@ -187,6 +193,27 @@ def generate_pgg_symmetries_simple(
 
 def ceil_div(a, b):
     return -(-a // b)
+
+
+def render_coloured_tile(vertices, edges, identifications, tolerance, renderer):
+    """Render a single tile with its octagon/square faces filled in, cropped to its own footprint."""
+    tiling = caleidoscope.Pattern(
+        vertices=vertices,
+        edges=edges,
+        polygons=[
+            ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "octagon"),
+            ([0, 1, 8, 9], "square"),
+        ],
+        center=vertices[10],
+        tolerance=tolerance,
+        identifications=identifications,
+    )
+    cp = tiling.construct(width=16, height=16)
+    return cp.render(
+        renderer=renderer,
+        edge_filter=lambda edge, tile: edge[2] == "s2",
+        margin=2,
+    )
 
 
 def interpolated_vertices(start, end, percentage):
@@ -745,17 +772,41 @@ def main():
                 else []
             )
         )
-        with open(path, "w") as f:
-            f.write(
-                wrap_standalone(
-                    "\n\n".join(
-                        [
-                            wrap_tikz_picture(tiling_renderer(tiling, renderer))
-                            for tiling in tilings
-                        ]
-                    )
-                )
+        write_standalone_tex(
+            path,
+            "\n\n".join(
+                [
+                    wrap_tikz_picture(tiling_renderer(tiling, renderer))
+                    for tiling in tilings
+                ]
+            ),
+        )
+
+    coloured_renderer = caleidoscope.TikzRenderer(
+        {
+            "s2": "black, thick",
+            "square": "fill=teal",
+            "octagon": "fill=orange",
+        }
+    )
+
+    write_standalone_tex(
+        OUTPUT_DIR / "starting_tile_coloured.tex",
+        wrap_tikz_picture(
+            render_coloured_tile(
+                vertices_starting_point_aligned, edges, identifications, 0.05, coloured_renderer
             )
+        ),
+    )
+
+    write_standalone_tex(
+        OUTPUT_DIR / "end_tile_coloured.tex",
+        wrap_tikz_picture(
+            render_coloured_tile(
+                vertices_end_point_aligned, edges, identifications, 0.05, coloured_renderer
+            )
+        ),
+    )
 
 
 if __name__ == "__main__":
