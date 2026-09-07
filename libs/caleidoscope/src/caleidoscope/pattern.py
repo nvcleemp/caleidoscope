@@ -154,7 +154,8 @@ class Pattern:
         width: float = 10,
         height: float = 10,
         edge_filter: Callable[[tuple[int, int, str], Tile], bool] | None = None,
-        polygon_filter: Callable[[tuple[tuple[int, ...], str], Tile], bool] | None = None
+        polygon_filter: Callable[[tuple[tuple[int, ...], str], Tile], bool] | None = None,
+        margin: float = 1
     ) -> Any:
         """
         Render the pattern within a specified boundary using the given renderer.
@@ -177,6 +178,9 @@ class Pattern:
             polygon_filter: Optional predicate function to filter polygons.
                         If provided, only polygons for which polygon_filter(polygon, tile) returns True
                         will be rendered. If None, all polygons are rendered.
+            margin: The distance by which the visible/cropped area is inset
+                    from the edges of the rendering region on each side.
+                    Passed through to renderer.initialize().
 
         Returns:
             The rendered output, as determined by renderer.finalize().
@@ -187,4 +191,6 @@ class Pattern:
         constructed = self.construct(center_x, center_y, width, height)
 
         # Render it
-        return constructed.render(renderer, edge_filter=edge_filter, polygon_filter=polygon_filter)
+        return constructed.render(
+            renderer, edge_filter=edge_filter, polygon_filter=polygon_filter, margin=margin
+        )

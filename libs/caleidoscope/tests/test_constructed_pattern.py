@@ -108,3 +108,25 @@ def test_get_tiles_returns_a_copy(constructed_pattern: ConstructedPattern) -> No
     tiles.clear()
     assert constructed_pattern.tile_count == original_count
     assert len(constructed_pattern.get_tiles()) == original_count
+
+
+class _RecordingRenderer:
+    def __init__(self) -> None:
+        self.margin: float | None = None
+
+    def initialize(self, center_x=0, center_y=0, width=10, height=10, margin=1) -> None:
+        self.margin = margin
+
+    def render_tile(self, tile, edge_filter=None, polygon_filter=None) -> None:
+        pass
+
+    def finalize(self):
+        return self.margin
+
+
+def test_render_defaults_margin_to_one(constructed_pattern: ConstructedPattern) -> None:
+    assert constructed_pattern.render(_RecordingRenderer()) == 1
+
+
+def test_render_forwards_custom_margin(constructed_pattern: ConstructedPattern) -> None:
+    assert constructed_pattern.render(_RecordingRenderer(), margin=2.5) == 2.5

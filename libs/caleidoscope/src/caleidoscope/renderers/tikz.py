@@ -78,7 +78,8 @@ class TikzRenderer:
         center_x: float = 0,
         center_y: float = 0,
         width: float = 10,
-        height: float = 10) -> None:
+        height: float = 10,
+        margin: float = 1) -> None:
         """
         Initialize the renderer with a bounding box.
 
@@ -87,6 +88,8 @@ class TikzRenderer:
             center_y: The y-coordinate of the center of the rendering region.
             width: The width of the rendering region.
             height: The height of the rendering region.
+            margin: The distance by which the bounding box is inset from the
+                    edges of the rendering region on each side.
         """
         self._buffer = []
         # Calculate bounds based on center and size
@@ -96,10 +99,10 @@ class TikzRenderer:
         max_x = center_x + half_width
         min_y = center_y - half_height
         max_y = center_y + half_height
-        # Add bounding box with 1-unit padding
+        # Add bounding box inset by margin on each side
         self._buffer.append(
-            f"  \\useasboundingbox ({min_x + 1},{min_y + 1}) "
-            f"rectangle ({max_x - 1},{max_y - 1});\n"
+            f"  \\useasboundingbox ({min_x + margin},{min_y + margin}) "
+            f"rectangle ({max_x - margin},{max_y - margin});\n"
         )
 
     def render_tile(

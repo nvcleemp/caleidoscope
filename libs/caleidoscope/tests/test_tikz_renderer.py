@@ -29,6 +29,18 @@ def test_initialize_bounding_box_respects_center_and_size() -> None:
     assert renderer.finalize() == "  \\useasboundingbox (1.0,-3.0) rectangle (3.0,1.0);\n"
 
 
+def test_initialize_respects_custom_margin() -> None:
+    renderer = TikzRenderer()
+    renderer.initialize(center_x=0, center_y=0, width=10, height=10, margin=2)
+    assert renderer.finalize() == "  \\useasboundingbox (-3.0,-3.0) rectangle (3.0,3.0);\n"
+
+
+def test_initialize_margin_zero_uses_full_bounding_box() -> None:
+    renderer = TikzRenderer()
+    renderer.initialize(center_x=0, center_y=0, width=10, height=10, margin=0)
+    assert renderer.finalize() == "  \\useasboundingbox (-5.0,-5.0) rectangle (5.0,5.0);\n"
+
+
 def test_render_tile_uses_empty_style_by_default() -> None:
     renderer = TikzRenderer()
     renderer.initialize()

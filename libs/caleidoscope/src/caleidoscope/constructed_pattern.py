@@ -150,7 +150,8 @@ class ConstructedPattern:
         self,
         renderer: Renderer,
         edge_filter: Callable[[tuple[int, int, str], Tile], bool] | None = None,
-        polygon_filter: Callable[[tuple[tuple[int, ...], str], Tile], bool] | None = None
+        polygon_filter: Callable[[tuple[tuple[int, ...], str], Tile], bool] | None = None,
+        margin: float = 1
     ) -> Any:
         """
         Render the constructed pattern using the given renderer.
@@ -169,6 +170,9 @@ class ConstructedPattern:
                         If provided, only polygons for which polygon_filter(polygon, tile) returns True
                         will be rendered. If None, all polygons are rendered.
                         Example: lambda polygon, tile: polygon[1] == "triangle"
+            margin: The distance by which the visible/cropped area is inset
+                    from the edges of the rendering region on each side.
+                    Passed through to renderer.initialize().
 
         Returns:
             The rendered output, as determined by renderer.finalize().
@@ -180,7 +184,8 @@ class ConstructedPattern:
             center_x=self._center_x,
             center_y=self._center_y,
             width=self._width,
-            height=self._height
+            height=self._height,
+            margin=margin
         )
 
         # Render each tile

@@ -45,27 +45,35 @@ def test_construct_excludes_tiles_outside_the_boundary() -> None:
     assert large.tile_count > small.tile_count
 
 
+class RecordingRenderer:
+    def __init__(self) -> None:
+        self.init_args: dict[str, float] | None = None
+
+    def initialize(self, center_x=0, center_y=0, width=10, height=10, margin=1) -> None:
+        self.init_args = {
+            "center_x": center_x,
+            "center_y": center_y,
+            "width": width,
+            "height": height,
+            "margin": margin,
+        }
+
+    def render_tile(self, tile, edge_filter=None, polygon_filter=None) -> None:
+        pass
+
+    def finalize(self):
+        return self.init_args
+
+
 def test_construct_region_is_forwarded_to_render_boundary() -> None:
     pattern = _square_pattern([])
-
-    class RecordingRenderer:
-        def __init__(self) -> None:
-            self.init_args: dict[str, float] | None = None
-
-        def initialize(self, center_x=0, center_y=0, width=10, height=10) -> None:
-            self.init_args = {
-                "center_x": center_x,
-                "center_y": center_y,
-                "width": width,
-                "height": height,
-            }
-
-        def render_tile(self, tile, edge_filter=None, polygon_filter=None) -> None:
-            pass
-
-        def finalize(self):
-            return self.init_args
-
     renderer = RecordingRenderer()
     result = pattern.render(renderer, center_x=1.0, center_y=2.0, width=3.0, height=4.0)
-    assert result == {"center_x": 1.0, "center_y": 2.0, "width": 3.0, "height": 4.0}
+    assert result == {"center_x": 1.0, "center_y": 2.0, "width": 3.0, "height": 4.0, "margin": 1}
+
+
+def test_render_forwards_custom_margin_to_renderer() -> None:
+    pattern = _square_pattern([])
+    renderer = RecordingRenderer()
+    result = pattern.render(renderer, width=3.0, height=4.0, margin=2.5)
+    assert result["margin"] == 2.5

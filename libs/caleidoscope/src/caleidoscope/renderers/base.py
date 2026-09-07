@@ -28,7 +28,8 @@ class Renderer(Protocol):
         center_x: float = 0,
         center_y: float = 0,
         width: float = 10,
-        height: float = 10) -> None:
+        height: float = 10,
+        margin: float = 1) -> None:
         """
         Initialize the renderer with the rendering boundary.
 
@@ -41,6 +42,9 @@ class Renderer(Protocol):
             center_y: The y-coordinate of the center of the rendering region.
             width: The width of the rendering region.
             height: The height of the rendering region.
+            margin: The distance by which the visible/cropped area is inset
+                    from the edges of the rendering region on each side.
+                    Renderers for which this concept doesn't apply may ignore it.
         """
         ...
 
