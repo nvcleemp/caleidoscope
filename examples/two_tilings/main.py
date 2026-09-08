@@ -830,6 +830,91 @@ def main():
             ),
         )
 
+    # The octagon/quadrangle spokes are the same regardless of which edges
+    # form the underlying p31m quadrangle grid, so they are shared between
+    # the start and end edge lists below.
+    base_p31m_spoke_edges = [
+        (10, 1, "s1"),
+        (10, 2, "s1"),
+        (10, 3, "s1"),
+        (10, 4, "s1"),
+        (10, 5, "s1"),
+        (10, 6, "s1"),
+        (10, 7, "s1"),
+        (10, 8, "s1"),
+        (11, 0, "s1"),
+        (11, 1, "s1"),
+        (11, 8, "s1"),
+        (11, 9, "s1"),
+        (10, 12, "s0"),
+        (10, 13, "s0"),
+        (10, 14, "s0"),
+        (10, 15, "s0"),
+        (10, 16, "s0"),
+        (10, 17, "s0"),
+        (10, 18, "s0"),
+        (10, 19, "s0"),
+        (11, 19, "s0"),
+        (11, 20, "s0"),
+        (11, 21, "s0"),
+        (11, 22, "s0"),
+    ]
+
+    base_p31m_edges_start = [
+        (0, 1, "s2base"),
+        (1, 2, "s2base"),
+        (2, 3, "s2base"),
+        (3, 4, "s2base"),
+        (4, 5, "s2base"),
+        (5, 6, "s2base"),
+        (6, 7, "s2base"),
+        (7, 8, "s2base"),
+        (8, 9, "s2base"),
+        (9, 0, "s2"),
+        (1, 8, "s2"),
+    ] + base_p31m_spoke_edges
+
+    base_p31m_edges_end = [
+        (0, 1, "s2"),
+        (1, 2, "s2base"),
+        (2, 3, "s2base"),
+        (3, 4, "s2base"),
+        (4, 5, "s2"),
+        (5, 6, "s2"),
+        (6, 7, "s2base"),
+        (7, 8, "s2base"),
+        (8, 9, "s2"),
+        (9, 0, "s2"),
+        (1, 8, "s2base"),
+    ] + base_p31m_spoke_edges
+
+    base_p31m_tilings_input = [
+        ("base_p31m_starting_tiling.tex", vertices_starting_point_rotated, base_p31m_edges_start),
+        ("base_p31m_end_tiling.tex", [(x / 1.5, y / 1.5) for (x, y) in vertices_end_point_rotated], base_p31m_edges_end),
+        ("base_p31m_starting_tiling_aligned.tex", vertices_starting_point_aligned, base_p31m_edges_start),
+        ("base_p31m_end_tiling_aligned.tex", vertices_end_point_aligned, base_p31m_edges_end),
+    ]
+
+    # Only "s2base" edges are ever drawn (see edge_filter below), so that is
+    # the only style this renderer needs.
+    base_renderer = caleidoscope.TikzRenderer({"s2base": "black, thick"})
+
+    for filename, vertices, tile_edges in base_p31m_tilings_input:
+        pattern = caleidoscope.Pattern(
+            vertices=vertices,
+            edges=tile_edges,
+            polygons=[],
+            center=vertices[10],
+            tolerance=0.05,
+            identifications=identifications,
+        )
+        write_standalone_tex(
+            OUTPUT_DIR / filename,
+            wrap_tikz_picture(
+                pattern.render(base_renderer, margin=2, edge_filter=lambda edge, _: edge[2] == "s2base", width=16, height=16)
+            ),
+        )
+
 
 if __name__ == "__main__":
     main()
