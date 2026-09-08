@@ -791,11 +791,11 @@ def main():
     )
 
     coloured_tilings_input = [
-        ("starting_tiling_coloured.tex", vertices_starting_point_rotated),
-        ("end_tiling_coloured.tex", [(x / 1.5, y / 1.5) for (x, y) in vertices_end_point_rotated]),
-        ("starting_tiling_coloured_aligned.tex", vertices_starting_point_aligned),
-        ("end_tiling_coloured_aligned.tex", vertices_end_point_aligned),
-        ("mid_tiling_coloured.tex", midpoint_vertices),
+        ("coloured_starting_tiling.tex", vertices_starting_point_rotated),
+        ("coloured_end_tiling.tex", [(x / 1.5, y / 1.5) for (x, y) in vertices_end_point_rotated]),
+        ("coloured_starting_tiling_aligned.tex", vertices_starting_point_aligned),
+        ("coloured_end_tiling_aligned.tex", vertices_end_point_aligned),
+        ("coloured_mid_tiling.tex", midpoint_vertices),
     ]
 
     for filename, vertices in coloured_tilings_input:
