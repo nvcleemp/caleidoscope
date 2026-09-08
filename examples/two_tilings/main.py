@@ -790,23 +790,21 @@ def main():
         }
     )
 
-    write_standalone_tex(
-        OUTPUT_DIR / "starting_tile_coloured.tex",
-        wrap_tikz_picture(
-            render_coloured_tile(
-                vertices_starting_point_aligned, edges, identifications, 0.05, coloured_renderer
-            )
-        ),
-    )
+    coloured_tilings_input = [
+        ("starting_tiling_coloured.tex", vertices_starting_point_rotated),
+        ("end_tiling_coloured.tex", [(x / 1.5, y / 1.5) for (x, y) in vertices_end_point_rotated]),
+        ("starting_tiling_coloured_aligned.tex", vertices_starting_point_aligned),
+        ("end_tiling_coloured_aligned.tex", vertices_end_point_aligned),
+        ("mid_tiling_coloured.tex", midpoint_vertices),
+    ]
 
-    write_standalone_tex(
-        OUTPUT_DIR / "end_tile_coloured.tex",
-        wrap_tikz_picture(
-            render_coloured_tile(
-                vertices_end_point_aligned, edges, identifications, 0.05, coloured_renderer
-            )
-        ),
-    )
+    for filename, vertices in coloured_tilings_input:
+        write_standalone_tex(
+            OUTPUT_DIR / filename,
+            wrap_tikz_picture(
+                render_coloured_tile(vertices, edges, identifications, 0.05, coloured_renderer)
+            ),
+        )
 
 
 if __name__ == "__main__":
