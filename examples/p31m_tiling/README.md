@@ -1,20 +1,22 @@
 # p31m tiling
 
 Animates a wallpaper-group-p31m tiling (triangular fundamental domain with
-reflections) as its shape parameter `x` sweeps across a range, producing two
+reflections) as its shape parameter `x` sweeps across a range, producing
 LaTeX documents — each a sequence of standalone TikZ pictures, one per frame,
 suitable for compiling into an animation:
 
 - `output/tile.tex` — the isolated fundamental tile, unfolded.
 - `output/tiling.tex` — the resulting periodic tiling.
+- `output/quadrangle.tex` — the isolated base quadrangle, with construction
+  annotations.
 
 Run with:
 
 ```bash
-uv run --package p31m-tiling python examples/p31m_tiling/main.py --mode {tile,tiling,both}
+uv run --package p31m-tiling python examples/p31m_tiling/main.py --mode {tile,tiling,quadrangle,all}
 ```
 
-`--mode` defaults to `both`. See `--help` for details.
+`--mode` defaults to `all`. See `--help` for details.
 
 ## Building videos
 

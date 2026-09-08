@@ -192,9 +192,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--mode",
-        choices=["tile", "tiling", "both", "quadrangle"],
-        default="both",
-        help="which output(s) to generate (default: both)",
+        choices=["tile", "tiling", "all", "quadrangle"],
+        default="all",
+        help="which output(s) to generate (default: all)",
     )
     args = parser.parse_args()
 
@@ -239,19 +239,19 @@ def main():
 
     OUTPUT_DIR.mkdir(exist_ok=True)
 
-    if args.mode in ("tile", "both"):
+    if args.mode in ("tile", "all"):
         content = render_tile_frames(x_values, edges, polygons)
         path = OUTPUT_DIR / "p31m_tile.tex"
         path.write_text(wrap_standalone(content))
         print(f"Wrote {path}")
 
-    if args.mode in ("tiling", "both"):
+    if args.mode in ("tiling", "all"):
         content = render_tiling_frames(x_values, edges, polygons, identifications)
         path = OUTPUT_DIR / "p31m_tiling.tex"
         path.write_text(wrap_standalone(content))
         print(f"Wrote {path}")
 
-    if args.mode == "quadrangle":
+    if args.mode in ("quadrangle", "all"):
         content = render_quadrangle_frames(x_values)
         path = OUTPUT_DIR / "p31m_quadrangle.tex"
         path.write_text(wrap_standalone(content))
