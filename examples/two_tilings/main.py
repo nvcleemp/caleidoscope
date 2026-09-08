@@ -806,6 +806,30 @@ def main():
             ),
         )
 
+    uncoloured_tilings_input = [
+        ("uncoloured_starting_tiling.tex", vertices_starting_point_rotated),
+        ("uncoloured_end_tiling.tex", [(x / 1.5, y / 1.5) for (x, y) in vertices_end_point_rotated]),
+        ("uncoloured_starting_tiling_aligned.tex", vertices_starting_point_aligned),
+        ("uncoloured_end_tiling_aligned.tex", vertices_end_point_aligned),
+        ("uncoloured_mid_tiling.tex", midpoint_vertices),
+    ]
+
+    for filename, vertices in uncoloured_tilings_input:
+        pattern = caleidoscope.Pattern(
+            vertices=vertices,
+            edges=edges,
+            polygons=[],
+            center=vertices[10],
+            tolerance=0.05,
+            identifications=identifications,
+        )
+        write_standalone_tex(
+            OUTPUT_DIR / filename,
+            wrap_tikz_picture(
+                pattern.render(renderer, margin=2, edge_filter=lambda edge, _: edge[2] == "s2", width=16, height=16)
+            ),
+        )
+
 
 if __name__ == "__main__":
     main()
