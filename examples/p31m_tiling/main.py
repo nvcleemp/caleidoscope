@@ -130,6 +130,45 @@ def render_quadrangle_frames(x_values) -> str:
     return content
 
 
+def render_quadrangle_with_chambers_frames(x_values, edges, polygons) -> str:
+    """Render each frame as the isolated tile with polygon fills suppressed
+    and each chamber labeled with its number at its barycenter."""
+    chambers = [
+        (0, 2, 4),
+        (2, 4, 6),
+        (2, 6, 9),
+        (3, 6, 9),
+        (3, 5, 6),
+        (3, 5, 7),
+        (3, 7, 8),
+        (1, 7, 8),
+    ]
+
+    content = ""
+    for x in x_values:
+        vertices = [(TILE_SCALE * vx, TILE_SCALE * vy) for vx, vy in quadrangle(x)]
+        chamber_labels = [
+            (p + 1, barycenter([vertices[i] for i in chamber]))
+            for p, chamber in enumerate(chambers)
+        ]
+        renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
+        renderer.initialize(center_x=5, center_y=3, width=20, height=12)
+        tile = caleidoscope.Tile(
+            vertices,
+            edges,
+            polygons,
+            caleidoscope.Transform2D(),
+            (),
+        )
+        renderer.render_tile(tile, polygon_filter=lambda polygon, tile: False)
+        tikz_commands = renderer.finalize()
+        tikz_commands += "\n".join(
+            f"\\node[draw=none] at ({x},{y}) {{${i}$}};" for i, (x, y) in chamber_labels
+        )
+        content += wrap_tikz_picture(tikz_commands + "\n")
+    return content
+
+
 def render_tile_frames(x_values, edges, polygons) -> str:
     """Render each frame as the isolated fundamental tile, unfolded."""
     content = ""
@@ -192,7 +231,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--mode",
-        choices=["tile", "tiling", "all", "quadrangle"],
+        choices=["tile", "tiling", "all", "quadrangle", "chambers"],
         default="all",
         help="which output(s) to generate (default: all)",
     )
@@ -254,6 +293,12 @@ def main():
     if args.mode in ("quadrangle", "all"):
         content = render_quadrangle_frames(x_values)
         path = OUTPUT_DIR / "p31m_quadrangle.tex"
+        path.write_text(wrap_standalone(content))
+        print(f"Wrote {path}")
+
+    if args.mode in ("chambers", "all"):
+        content = render_quadrangle_with_chambers_frames(x_values, edges, polygons)
+        path = OUTPUT_DIR / "p31m_chambers.tex"
         path.write_text(wrap_standalone(content))
         print(f"Wrote {path}")
 

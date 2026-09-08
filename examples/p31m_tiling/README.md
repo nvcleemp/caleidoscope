@@ -9,11 +9,13 @@ suitable for compiling into an animation:
 - `output/tiling.tex` — the resulting periodic tiling.
 - `output/quadrangle.tex` — the isolated base quadrangle, with construction
   annotations.
+- `output/chambers.tex` — the isolated tile with polygon fills suppressed and
+  each chamber labeled with its number.
 
 Run with:
 
 ```bash
-uv run --package p31m-tiling python examples/p31m_tiling/main.py --mode {tile,tiling,quadrangle,all}
+uv run --package p31m-tiling python examples/p31m_tiling/main.py --mode {tile,tiling,quadrangle,chambers,all}
 ```
 
 `--mode` defaults to `all`. See `--help` for details.
