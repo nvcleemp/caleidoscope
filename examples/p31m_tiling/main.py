@@ -62,6 +62,17 @@ def wrap_standalone(content):
 """
 
 
+def wrap_beamer(content):
+    """Wrap the TikZ content in a single-frame beamer document."""
+    return f"""\\documentclass{{beamer}}
+\\usepackage{{tikz}}
+\\begin{{document}}
+\\begin{{frame}}
+{content}\\end{{frame}}
+\\end{{document}}
+"""
+
+
 def quadrangle(x: float):
     # Fixed base vertices
     p1 = (0.0, 0.0)
@@ -234,6 +245,50 @@ def render_tiling_frames(x_values, edges, polygons, identifications) -> str:
 
 MAX_CONSTRUCTION_FRAMES = 20
 
+# Each entry is (n, owner): show the first n tiles (in construction/BFS
+# order), with `owner`'s generator edges highlighted to indicate it's the
+# tile currently spawning children (or no highlight, if `owner` is None).
+CONSTRUCTION_STEPS = [
+    (1, None),
+    (1, 1),
+    (2, 1),
+    (3, 1),
+    (4, 1),
+    # Children of 2
+    (4, 2),
+    (5, 2),
+    (6, 2),
+    # Children of 3
+    (6, 3),
+    (7, 3),
+    (8, 3),
+    # Children of 4
+    (8, 4),
+    (9, 4),
+    (10, 4),
+    # Children of 5
+    (10, 5),
+    (11, 5),
+    (12, 5),
+    # Children of 6
+    (12, 6),
+    (13, 6),
+    (14, 6),
+    # Children of 7
+    (14, 7),
+    (15, 7),
+    # Children of 8
+    (15, 8),
+    (16, 8),
+    (17, 8),
+    # Children of 9
+    (17, 9),
+    (18, 9),
+    # Children of 10
+    (18, 10),
+    (19, 10),
+]
+
 
 def render_tiling_construction_frames(edges, polygons, identifications) -> str:
     """Render each frame as the fixed-shape tiling with one more tile added,
@@ -254,49 +309,9 @@ def render_tiling_construction_frames(edges, polygons, identifications) -> str:
     )
     constructed = tiling.construct(center_x=bc[0], center_y=bc[1], width=12, height=12)
     tiles = constructed.get_tiles()[:MAX_CONSTRUCTION_FRAMES]
-    steps = [
-        (1, None),
-        (1, 1),
-        (2, 1),
-        (3, 1),
-        (4, 1),
-        # Children of 2
-        (4, 2),
-        (5, 2),
-        (6, 2),
-        # Children of 3
-        (6, 3),
-        (7, 3),
-        (8, 3),
-        # Children of 4
-        (8, 4),
-        (9, 4),
-        (10, 4),
-        # Children of 5
-        (10, 5),
-        (11, 5),
-        (12, 5),
-        # Children of 6
-        (12, 6),
-        (13, 6),
-        (14, 6),
-        # Children of 7
-        (14, 7),
-        (15, 7),
-        # Children of 8
-        (15, 8),
-        (16, 8),
-        (17, 8),
-        # Children of 9
-        (17, 9),
-        (18, 9),
-        # Children of 10
-        (18, 10),
-        (19, 10),
-    ]
 
     content = ""
-    for n, owner in steps:
+    for n, owner in CONSTRUCTION_STEPS:
         frame = caleidoscope.ConstructedPattern(tiles[:n], bc[0], bc[1], 12, 12)
         renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
         tikz_commands = (
@@ -338,11 +353,130 @@ def render_tiling_construction_frames(edges, polygons, identifications) -> str:
     return content
 
 
+def render_tiling_construction_beamer_frames(edges, polygons, identifications) -> str:
+    """Render the same construction sequence as render_tiling_construction_frames,
+    but as a single tikzpicture using beamer \\only<start-end> overlays instead
+    of one standalone picture per step.
+
+    Each tile's own geometry (fill, main edges, s2 edges, side boundary) is
+    rendered once and wrapped in \\only<n-N> (N = total overlay count), so it
+    appears at the overlay where CONSTRUCTION_STEPS first reaches that tile's
+    count and then stays visible. Each generator highlight is rendered once
+    per contiguous run of steps sharing the same owner and wrapped in
+    \\only<start-end> for just that run. Draw order follows
+    render_tiling_construction_frames: all tile geometry, then all
+    highlights, then all labels, so the on-top/underneath relationships at
+    every overlay match the per-step version exactly."""
+    x = 0.5
+    vertices = [(TILING_SCALE * vx, TILING_SCALE * vy) for vx, vy in quadrangle(x)]
+    bc = barycenter(vertices)
+    tiling = caleidoscope.Pattern(
+        vertices=vertices,
+        edges=edges,
+        polygons=polygons,
+        center=bc,
+        tolerance=0.1,
+        identifications=identifications,
+    )
+    constructed = tiling.construct(center_x=bc[0], center_y=bc[1], width=12, height=12)
+    tiles = constructed.get_tiles()[:MAX_CONSTRUCTION_FRAMES]
+
+    total_overlays = len(CONSTRUCTION_STEPS)
+    max_tiles = max(n for n, _ in CONSTRUCTION_STEPS)
+
+    # First overlay (1-indexed) at which each tile count is reached.
+    introduced_at = {}
+    for overlay, (n, _owner) in enumerate(CONSTRUCTION_STEPS, start=1):
+        introduced_at.setdefault(n, overlay)
+
+    # Contiguous (owner, start_overlay, end_overlay) runs, skipping the
+    # owner-less step(s) that show a tile before it starts generating.
+    owner_runs = []
+    prev_overlay = None
+    for overlay, (_n, owner) in enumerate(CONSTRUCTION_STEPS, start=1):
+        if owner is None:
+            continue
+        if owner_runs and owner_runs[-1][0] == owner and prev_overlay == overlay - 1:
+            owner_runs[-1] = (owner, owner_runs[-1][1], overlay)
+        else:
+            owner_runs.append((owner, overlay, overlay))
+        prev_overlay = overlay
+
+    frame = caleidoscope.ConstructedPattern(tiles[:max_tiles], bc[0], bc[1], 12, 12)
+    renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
+
+    def only(start, end, body):
+        return f"\\only<{start}-{end}>{{\n{body}\n}}\n"
+
+    geometry_blocks = []
+    label_blocks = []
+    for t in range(1, max_tiles + 1):
+        tile = tiles[t - 1]
+        body = (
+            frame.render(
+                renderer,
+                edge_filter=lambda edge, rtile, tile=tile: (
+                    edge[2] != "s2"
+                    and not edge[2].startswith("side")
+                    and rtile == tile
+                ),
+                polygon_filter=lambda polygon, rtile, tile=tile: rtile == tile,
+            )
+            + "\n"
+            + frame.render(
+                renderer,
+                edge_filter=lambda edge, rtile, tile=tile: (
+                    edge[2] == "s2" and rtile == tile
+                ),
+                polygon_filter=lambda polygon, rtile: False,
+            )
+            + "\n"
+            + frame.render(
+                renderer,
+                edge_filter=lambda edge, rtile, tile=tile: (
+                    edge[2] == "side" and rtile == tile
+                ),
+                polygon_filter=lambda polygon, rtile: False,
+            )
+        )
+        geometry_blocks.append(only(introduced_at[t], total_overlays, body))
+
+        label_x, label_y = barycenter([tile.vertices[p] for p in (2, 3, 4, 5)])
+        label = (
+            f"\\node[circle, draw=none, fill=white, minimum size=10pt, inner sep=1pt] "
+            f"at ({label_x},{label_y}) {{\\scriptsize {t}}};"
+        )
+        label_blocks.append(only(introduced_at[t], total_overlays, label))
+
+    highlight_blocks = []
+    for owner, start, end in owner_runs:
+        tile = tiles[owner - 1]
+        body = frame.render(
+            renderer,
+            edge_filter=lambda edge, rtile, tile=tile: (
+                edge[2].startswith("gen") and rtile == tile
+            ),
+            polygon_filter=lambda polygon, rtile: False,
+        )
+        highlight_blocks.append(only(start, end, body))
+
+    content = "".join(geometry_blocks) + "".join(highlight_blocks) + "".join(label_blocks)
+    return wrap_tikz_picture(content)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--mode",
-        choices=["tile", "tiling", "all", "quadrangle", "chambers", "construction"],
+        choices=[
+            "tile",
+            "tiling",
+            "all",
+            "quadrangle",
+            "chambers",
+            "construction",
+            "construction_beamer",
+        ],
         default="all",
         help="which output(s) to generate (default: all)",
     )
@@ -429,6 +563,14 @@ def main():
         )
         path = OUTPUT_DIR / "p31m_tiling_construction.tex"
         path.write_text(wrap_standalone(content))
+        print(f"Wrote {path}")
+
+    if args.mode in ("construction_beamer", "all"):
+        content = render_tiling_construction_beamer_frames(
+            edges + tile_boundary_edges, polygons, identifications
+        )
+        path = OUTPUT_DIR / "p31m_tiling_construction_beamer.tex"
+        path.write_text(wrap_beamer(content))
         print(f"Wrote {path}")
 
 
