@@ -2,9 +2,10 @@
 Animate a p31m wallpaper-group tiling as its fundamental tile is deformed by
 a shape parameter x, ranging over x_values.
 
-Generates two LaTeX documents, each a sequence of standalone TikZ pictures
-(one per frame): the isolated fundamental tile, and the resulting periodic
-tiling.
+Generates several LaTeX documents, each a sequence of standalone TikZ
+pictures (one per frame): the isolated fundamental tile, and the resulting
+periodic tiling, both animated over the shape parameter x; plus a
+fixed-shape tiling built up one tile at a time in construction order.
 """
 
 import argparse
@@ -28,6 +29,10 @@ ANNOTATION_STYLES = {
     "triangle": "draw=none, fill=blue!20",
     "quadrangle": "draw=none, fill=purple!20",
     "triangle2": "draw=none, fill=orange!20",
+    "side": "gray, ultra thick",
+    "gen1": "blue, ultra thick",
+    "gen2": "purple, ultra thick",
+    "gen3": "orange, ultra thick",
 }
 
 
@@ -227,11 +232,88 @@ def render_tiling_frames(x_values, edges, polygons, identifications) -> str:
     return content
 
 
+MAX_CONSTRUCTION_FRAMES = 20
+
+
+def render_tiling_construction_frames(edges, polygons, identifications) -> str:
+    """Render each frame as the fixed-shape tiling with one more tile added,
+    in construction (BFS) order, building up from the fundamental tile.
+
+    Stops after MAX_CONSTRUCTION_FRAMES tiles, since the idea is already
+    clear well before the tiling fills the full boundary."""
+    x = 0.5
+    vertices = [(TILING_SCALE * vx, TILING_SCALE * vy) for vx, vy in quadrangle(x)]
+    bc = barycenter(vertices)
+    tiling = caleidoscope.Pattern(
+        vertices=vertices,
+        edges=edges,
+        polygons=polygons,
+        center=bc,
+        tolerance=0.1,
+        identifications=identifications,
+    )
+    constructed = tiling.construct(center_x=bc[0], center_y=bc[1], width=12, height=12)
+    tiles = constructed.get_tiles()[:MAX_CONSTRUCTION_FRAMES]
+    generator_owner = (
+        [1] * 4
+        + [2] * 2
+        + [3] * 2
+        + [4] * 2
+        + [5] * 2
+        + [6] * 2
+        + [7]
+        + [8] * 2
+        + [9, 10, 15]
+    )
+
+    content = ""
+    for n, owner in zip(range(1, len(tiles) + 1), generator_owner):
+        frame = caleidoscope.ConstructedPattern(tiles[:n], bc[0], bc[1], 12, 12)
+        renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
+        tikz_commands = (
+            frame.render(
+                renderer,
+                edge_filter=lambda edge, tile: (
+                    edge[2] != "s2" and not edge[2].startswith("side")
+                ),
+                polygon_filter=None,
+            )
+            + "\n"
+            + frame.render(
+                renderer,
+                edge_filter=lambda edge, tile: edge[2] == "s2",
+                polygon_filter=lambda polygon, tile: False,
+            )
+            + "\n"
+            + frame.render(
+                renderer,
+                edge_filter=lambda edge, tile: edge[2] == "side",
+                polygon_filter=lambda polygon, tile: False,
+            )
+            + "\n"
+            + frame.render(
+                renderer,
+                edge_filter=lambda edge, tile: (
+                    edge[2].startswith("gen") and tile == tiles[owner - 1]
+                ),
+                polygon_filter=lambda polygon, tile: False,
+            )
+        )
+        labels = "\n".join(
+            f"\\node[circle, draw=none, fill=white, minimum size=10pt, inner sep=1pt] "
+            f"at ({barycenter([tile.vertices[p] for p in (2, 3, 4, 5)])[0]},{barycenter([tile.vertices[p] for p in (2, 3, 4, 5)])[1]}) "
+            f"{{\\scriptsize {i}}};"
+            for i, tile in enumerate(tiles[:n], start=1)
+        )
+        content += wrap_tikz_picture(tikz_commands + "\n" + labels + "\n")
+    return content
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--mode",
-        choices=["tile", "tiling", "all", "quadrangle", "chambers"],
+        choices=["tile", "tiling", "all", "quadrangle", "chambers", "construction"],
         default="all",
         help="which output(s) to generate (default: all)",
     )
@@ -276,6 +358,16 @@ def main():
         ((3, 1), (3, 2), True),
     ]
 
+    tile_boundary_edges = [
+        (0, 1, "side"),
+        (0, 2, "side"),
+        (2, 3, "side"),
+        (1, 3, "side"),
+        (0, 1, "gen1"),
+        (0, 2, "gen2"),
+        (2, 3, "gen3"),
+    ]
+
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     if args.mode in ("tile", "all"):
@@ -299,6 +391,14 @@ def main():
     if args.mode in ("chambers", "all"):
         content = render_quadrangle_with_chambers_frames(x_values, edges, polygons)
         path = OUTPUT_DIR / "p31m_chambers.tex"
+        path.write_text(wrap_standalone(content))
+        print(f"Wrote {path}")
+
+    if args.mode in ("construction", "all"):
+        content = render_tiling_construction_frames(
+            edges + tile_boundary_edges, polygons, identifications
+        )
+        path = OUTPUT_DIR / "p31m_tiling_construction.tex"
         path.write_text(wrap_standalone(content))
         print(f"Wrote {path}")
 
