@@ -23,7 +23,7 @@ TILE_SCALE = 10
 TILING_SCALE = 2
 
 ANNOTATION_STYLES = {
-    "s0": "green, ultra thin",
+    "s0": "teal, ultra thin",
     "s1": "red, ultra thin",
     "s2": "black, thick",
     "triangle": "draw=none, fill=blue!20",
