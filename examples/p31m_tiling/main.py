@@ -254,20 +254,49 @@ def render_tiling_construction_frames(edges, polygons, identifications) -> str:
     )
     constructed = tiling.construct(center_x=bc[0], center_y=bc[1], width=12, height=12)
     tiles = constructed.get_tiles()[:MAX_CONSTRUCTION_FRAMES]
-    generator_owner = (
-        [1] * 4
-        + [2] * 2
-        + [3] * 2
-        + [4] * 2
-        + [5] * 2
-        + [6] * 2
-        + [7]
-        + [8] * 2
-        + [9, 10, 15]
-    )
+    steps = [
+        (1, None),
+        (1, 1),
+        (2, 1),
+        (3, 1),
+        (4, 1),
+        # Children of 2
+        (4, 2),
+        (5, 2),
+        (6, 2),
+        # Children of 3
+        (6, 3),
+        (7, 3),
+        (8, 3),
+        # Children of 4
+        (8, 4),
+        (9, 4),
+        (10, 4),
+        # Children of 5
+        (10, 5),
+        (11, 5),
+        (12, 5),
+        # Children of 6
+        (12, 6),
+        (13, 6),
+        (14, 6),
+        # Children of 7
+        (14, 7),
+        (15, 7),
+        # Children of 8
+        (15, 8),
+        (16, 8),
+        (17, 8),
+        # Children of 9
+        (17, 9),
+        (18, 9),
+        # Children of 10
+        (18, 10),
+        (19, 10),
+    ]
 
     content = ""
-    for n, owner in zip(range(1, len(tiles) + 1), generator_owner):
+    for n, owner in steps:
         frame = caleidoscope.ConstructedPattern(tiles[:n], bc[0], bc[1], 12, 12)
         renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
         tikz_commands = (
@@ -294,7 +323,7 @@ def render_tiling_construction_frames(edges, polygons, identifications) -> str:
             + frame.render(
                 renderer,
                 edge_filter=lambda edge, tile: (
-                    edge[2].startswith("gen") and tile == tiles[owner - 1]
+                    edge[2].startswith("gen") and owner is not None and tile == tiles[owner - 1]
                 ),
                 polygon_filter=lambda polygon, tile: False,
             )
