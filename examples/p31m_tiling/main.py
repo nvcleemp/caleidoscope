@@ -139,9 +139,9 @@ def render_quadrangle_with_chambers_frames(x_values, edges, polygons) -> str:
         (2, 6, 9),
         (3, 6, 9),
         (3, 5, 6),
-        (3, 5, 7),
-        (3, 7, 8),
         (1, 7, 8),
+        (3, 7, 8),
+        (3, 5, 7),
     ]
 
     content = ""
