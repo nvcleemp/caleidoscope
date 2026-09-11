@@ -6,10 +6,16 @@ Generates several LaTeX documents, each a sequence of standalone TikZ
 pictures (one per frame): the isolated fundamental tile, and the resulting
 periodic tiling, both animated over the shape parameter x; plus a
 fixed-shape tiling built up one tile at a time in construction order.
+
+Two fundamental domains are available (`--domain`), producing the same
+tiling from differently glued chambers; domain "1" is the original
+construction, domain "2" an alternate one.
 """
 
 import argparse
 import math
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 import caleidoscope
@@ -36,6 +42,24 @@ ANNOTATION_STYLES = {
 }
 
 
+@dataclass
+class Domain:
+    """Everything that differs between the two fundamental-domain gluings."""
+
+    suffix: str
+    quadrangle: Callable[[float], list]
+    chambers: list
+    edges: list
+    polygons: list
+    identifications: list
+    tile_boundary_edges: list
+    # Each entry is (n, owner): show the first n tiles (in construction/BFS
+    # order), with `owner`'s generator edges highlighted to indicate it's the
+    # tile currently spawning children (or no highlight, if `owner` is None).
+    construction_steps: list
+    tile_view: dict
+
+
 def barycenter(points):
     """Calculate the barycenter (centroid) of a list of points."""
     n = len(points)
@@ -44,6 +68,17 @@ def barycenter(points):
     x_sum = sum(p[0] for p in points)
     y_sum = sum(p[1] for p in points)
     return (x_sum / n, y_sum / n)
+
+
+def line_intersection(a1, a2, b1, b2):
+    """Intersection of line a1-a2 with line b1-b2."""
+    x1, y1 = a1
+    x2, y2 = a2
+    x3, y3 = b1
+    x4, y4 = b2
+    denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+    t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom
+    return (x1 + t * (x2 - x1), y1 + t * (y2 - y1))
 
 
 def wrap_tikz_picture(tikz_content):
@@ -73,7 +108,7 @@ def wrap_beamer(content):
 """
 
 
-def quadrangle(x: float):
+def quadrangle_1(x: float):
     # Fixed base vertices
     p1 = (0.0, 0.0)
     p2 = (1.0, 0.0)
@@ -115,13 +150,42 @@ def quadrangle(x: float):
     return [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10]
 
 
-def render_quadrangle_frames(x_values) -> str:
+def quadrangle_2(x: float):
+    rad_60 = math.radians(60)
+
+    # Fixed base vertices
+    p0 = (0.0, 0.0)
+    p5 = (1.0, 0.0)
+    p3 = (math.cos(rad_60), math.sin(rad_60))
+
+    p1 = (x * math.cos(rad_60), x * math.sin(rad_60))
+    p7 = (x * math.cos(rad_60), 0)
+
+    p2 = barycenter([p1, p3])
+    p6 = barycenter([p7, p5])
+
+    # p4 is placed such that the triangle P3-P5-P4 has angles 30° at P3 and P5, and 120° at P4.
+    mid = barycenter([p3, p5])
+    d = math.hypot(p5[0] - p3[0], p5[1] - p3[1])
+    half_base = d / 2
+    height = half_base * math.tan(math.radians(30))  # base_angle -> height
+    # unit vector perpendicular to A->B
+    ux, uy = -(p5[1] - p3[1]) / d, (p5[0] - p3[0]) / d  # pick sign for correct side
+    p4 = (mid[0] + height * ux, mid[1] + height * uy)
+
+    # p8 is placed at the intersection of p2p6 and p1p4
+    p8 = line_intersection(p2, p6, p1, p4)
+
+    return [p0, p1, p2, p3, p4, p5, p6, p7, p8]
+
+
+def render_quadrangle_frames(x_values, domain: Domain) -> str:
     """Render each frame as the isolated base quadrangle, with the angle and
     side-length annotations used to construct it."""
     content = "\\usetikzlibrary{calc}\n\n"
     for x in x_values:
         p1, p2, p3, p4 = [
-            (TILE_SCALE * vx, TILE_SCALE * vy) for vx, vy in quadrangle(x)[:4]
+            (TILE_SCALE * vx, TILE_SCALE * vy) for vx, vy in domain.quadrangle(x)[:4]
         ]
 
         # Angle (in degrees) of the ray P4->P2, used to place the 120° arc
@@ -146,33 +210,24 @@ def render_quadrangle_frames(x_values) -> str:
     return content
 
 
-def render_quadrangle_with_chambers_frames(x_values, edges, polygons) -> str:
+def render_quadrangle_with_chambers_frames(x_values, domain: Domain) -> str:
     """Render each frame as the isolated tile with polygon fills suppressed
     and each chamber labeled with its number at its barycenter."""
-    chambers = [
-        (0, 2, 4),
-        (2, 4, 6),
-        (2, 6, 9),
-        (3, 6, 9),
-        (3, 5, 6),
-        (1, 7, 8),
-        (3, 7, 8),
-        (3, 5, 7),
-    ]
-
     content = ""
     for x in x_values:
-        vertices = [(TILE_SCALE * vx, TILE_SCALE * vy) for vx, vy in quadrangle(x)]
+        vertices = [
+            (TILE_SCALE * vx, TILE_SCALE * vy) for vx, vy in domain.quadrangle(x)
+        ]
         chamber_labels = [
             (p + 1, barycenter([vertices[i] for i in chamber]))
-            for p, chamber in enumerate(chambers)
+            for p, chamber in enumerate(domain.chambers)
         ]
         renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
-        renderer.initialize(center_x=5, center_y=3, width=20, height=12)
+        renderer.initialize(**domain.tile_view)
         tile = caleidoscope.Tile(
             vertices,
-            edges,
-            polygons,
+            domain.edges,
+            domain.polygons,
             caleidoscope.Transform2D(),
             (),
         )
@@ -185,17 +240,17 @@ def render_quadrangle_with_chambers_frames(x_values, edges, polygons) -> str:
     return content
 
 
-def render_tile_frames(x_values, edges, polygons) -> str:
+def render_tile_frames(x_values, domain: Domain) -> str:
     """Render each frame as the isolated fundamental tile, unfolded."""
     content = ""
     for x in x_values:
-        vertices = quadrangle(x)
+        vertices = domain.quadrangle(x)
         renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
-        renderer.initialize(center_x=5, center_y=3, width=20, height=12)
+        renderer.initialize(**domain.tile_view)
         tile = caleidoscope.Tile(
             [(TILE_SCALE * vx, TILE_SCALE * vy) for vx, vy in vertices],
-            edges,
-            polygons,
+            domain.edges,
+            domain.polygons,
             caleidoscope.Transform2D(),
             (),
         )
@@ -204,20 +259,22 @@ def render_tile_frames(x_values, edges, polygons) -> str:
     return content
 
 
-def render_tiling_frames(x_values, edges, polygons, identifications) -> str:
+def render_tiling_frames(x_values, domain: Domain) -> str:
     """Render each frame as the full periodic tiling."""
     content = ""
     for x in x_values:
-        vertices = [(TILING_SCALE * vx, TILING_SCALE * vy) for vx, vy in quadrangle(x)]
+        vertices = [
+            (TILING_SCALE * vx, TILING_SCALE * vy) for vx, vy in domain.quadrangle(x)
+        ]
         bc = barycenter(vertices)
         renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
         tiling = caleidoscope.Pattern(
             vertices=vertices,
-            edges=edges,
-            polygons=polygons,
+            edges=domain.edges,
+            polygons=domain.polygons,
             center=bc,
             tolerance=0.1,
-            identifications=identifications,
+            identifications=domain.identifications,
         )
         content += wrap_tikz_picture(
             tiling.render(
@@ -245,73 +302,31 @@ def render_tiling_frames(x_values, edges, polygons, identifications) -> str:
 
 MAX_CONSTRUCTION_FRAMES = 20
 
-# Each entry is (n, owner): show the first n tiles (in construction/BFS
-# order), with `owner`'s generator edges highlighted to indicate it's the
-# tile currently spawning children (or no highlight, if `owner` is None).
-CONSTRUCTION_STEPS = [
-    (1, None),
-    (1, 1),
-    (2, 1),
-    (3, 1),
-    (4, 1),
-    # Children of 2
-    (4, 2),
-    (5, 2),
-    (6, 2),
-    # Children of 3
-    (6, 3),
-    (7, 3),
-    (8, 3),
-    # Children of 4
-    (8, 4),
-    (9, 4),
-    (10, 4),
-    # Children of 5
-    (10, 5),
-    (11, 5),
-    (12, 5),
-    # Children of 6
-    (12, 6),
-    (13, 6),
-    (14, 6),
-    # Children of 7
-    (14, 7),
-    (15, 7),
-    # Children of 8
-    (15, 8),
-    (16, 8),
-    (17, 8),
-    # Children of 9
-    (17, 9),
-    (18, 9),
-    # Children of 10
-    (18, 10),
-    (19, 10),
-]
 
-
-def render_tiling_construction_frames(edges, polygons, identifications) -> str:
+def render_tiling_construction_frames(domain: Domain) -> str:
     """Render each frame as the fixed-shape tiling with one more tile added,
     in construction (BFS) order, building up from the fundamental tile.
 
     Stops after MAX_CONSTRUCTION_FRAMES tiles, since the idea is already
     clear well before the tiling fills the full boundary."""
     x = 0.5
-    vertices = [(TILING_SCALE * vx, TILING_SCALE * vy) for vx, vy in quadrangle(x)]
+    vertices = [
+        (TILING_SCALE * vx, TILING_SCALE * vy) for vx, vy in domain.quadrangle(x)
+    ]
     bc = barycenter(vertices)
     tiling = caleidoscope.Pattern(
         vertices=vertices,
-        edges=edges,
-        polygons=polygons,
+        edges=domain.edges + domain.tile_boundary_edges,
+        polygons=domain.polygons,
         center=bc,
         tolerance=0.1,
-        identifications=identifications,
+        identifications=domain.identifications,
     )
     constructed = tiling.construct(center_x=bc[0], center_y=bc[1], width=12, height=12)
     tiles = constructed.get_tiles()[:MAX_CONSTRUCTION_FRAMES]
 
     content = ""
-    for n, owner in CONSTRUCTION_STEPS:
+    for n, owner in domain.construction_steps:
         frame = caleidoscope.ConstructedPattern(tiles[:n], bc[0], bc[1], 12, 12)
         renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
         tikz_commands = (
@@ -353,47 +368,50 @@ def render_tiling_construction_frames(edges, polygons, identifications) -> str:
     return content
 
 
-def render_tiling_construction_beamer_frames(edges, polygons, identifications) -> str:
+def render_tiling_construction_beamer_frames(domain: Domain) -> str:
     """Render the same construction sequence as render_tiling_construction_frames,
     but as a single tikzpicture using beamer \\only<start-end> overlays instead
     of one standalone picture per step.
 
     Each tile's own geometry (fill, main edges, s2 edges, side boundary) is
     rendered once and wrapped in \\only<n-N> (N = total overlay count), so it
-    appears at the overlay where CONSTRUCTION_STEPS first reaches that tile's
-    count and then stays visible. Each generator highlight is rendered once
-    per contiguous run of steps sharing the same owner and wrapped in
+    appears at the overlay where domain.construction_steps first reaches that
+    tile's count and then stays visible. Each generator highlight is rendered
+    once per contiguous run of steps sharing the same owner and wrapped in
     \\only<start-end> for just that run. Draw order follows
     render_tiling_construction_frames: all tile geometry, then all
     highlights, then all labels, so the on-top/underneath relationships at
     every overlay match the per-step version exactly."""
     x = 0.5
-    vertices = [(TILING_SCALE * vx, TILING_SCALE * vy) for vx, vy in quadrangle(x)]
+    vertices = [
+        (TILING_SCALE * vx, TILING_SCALE * vy) for vx, vy in domain.quadrangle(x)
+    ]
     bc = barycenter(vertices)
     tiling = caleidoscope.Pattern(
         vertices=vertices,
-        edges=edges,
-        polygons=polygons,
+        edges=domain.edges + domain.tile_boundary_edges,
+        polygons=domain.polygons,
         center=bc,
         tolerance=0.1,
-        identifications=identifications,
+        identifications=domain.identifications,
     )
     constructed = tiling.construct(center_x=bc[0], center_y=bc[1], width=12, height=12)
     tiles = constructed.get_tiles()[:MAX_CONSTRUCTION_FRAMES]
 
-    total_overlays = len(CONSTRUCTION_STEPS)
-    max_tiles = max(n for n, _ in CONSTRUCTION_STEPS)
+    construction_steps = domain.construction_steps
+    total_overlays = len(construction_steps)
+    max_tiles = max(n for n, _ in construction_steps)
 
     # First overlay (1-indexed) at which each tile count is reached.
     introduced_at = {}
-    for overlay, (n, _owner) in enumerate(CONSTRUCTION_STEPS, start=1):
+    for overlay, (n, _owner) in enumerate(construction_steps, start=1):
         introduced_at.setdefault(n, overlay)
 
     # Contiguous (owner, start_overlay, end_overlay) runs, skipping the
     # owner-less step(s) that show a tile before it starts generating.
     owner_runs = []
     prev_overlay = None
-    for overlay, (_n, owner) in enumerate(CONSTRUCTION_STEPS, start=1):
+    for overlay, (_n, owner) in enumerate(construction_steps, start=1):
         if owner is None:
             continue
         if owner_runs and owner_runs[-1][0] == owner and prev_overlay == overlay - 1:
@@ -464,6 +482,204 @@ def render_tiling_construction_beamer_frames(edges, polygons, identifications) -
     return wrap_tikz_picture(content)
 
 
+def output_path(domain: Domain, name: str) -> Path:
+    return OUTPUT_DIR / f"p31m_{name}{domain.suffix}.tex"
+
+
+def build_domains() -> dict:
+    domain_1 = Domain(
+        suffix="",
+        quadrangle=quadrangle_1,
+        chambers=[
+            (0, 2, 4),
+            (2, 4, 6),
+            (2, 6, 9),
+            (3, 6, 9),
+            (3, 5, 6),
+            (1, 7, 8),
+            (3, 7, 8),
+            (3, 5, 7),
+        ],
+        edges=[
+            (0, 4, "s0"),
+            (4, 6, "s0"),
+            (6, 5, "s0"),
+            (5, 7, "s0"),
+            (7, 1, "s1"),
+            (0, 2, "s1"),
+            (1, 8, "s2"),
+            (8, 3, "s2"),
+            (2, 9, "s2"),
+            (9, 3, "s2"),
+            (4, 2, "s2"),
+            (5, 3, "s2"),
+            (2, 6, "s1"),
+            (6, 9, "s0"),
+            (3, 6, "s1"),
+            (3, 7, "s1"),
+            (7, 8, "s0"),
+        ],
+        polygons=[
+            ([0, 4, 2], "triangle"),
+            ([4, 2, 3, 5], "quadrangle"),
+            ([5, 3, 1], "triangle2"),
+        ],
+        identifications=[
+            ((0, 1), (0, 1), False),
+            ((0, 2), (0, 2), False),
+            ((3, 1), (3, 2), True),
+        ],
+        tile_boundary_edges=[
+            (0, 1, "side"),
+            (0, 2, "side"),
+            (2, 3, "side"),
+            (1, 3, "side"),
+            (0, 1, "gen1"),
+            (0, 2, "gen2"),
+            (2, 3, "gen3"),
+        ],
+        construction_steps=[
+            (1, None),
+            (1, 1),
+            (2, 1),
+            (3, 1),
+            (4, 1),
+            # Children of 2
+            (4, 2),
+            (5, 2),
+            (6, 2),
+            # Children of 3
+            (6, 3),
+            (7, 3),
+            (8, 3),
+            # Children of 4
+            (8, 4),
+            (9, 4),
+            (10, 4),
+            # Children of 5
+            (10, 5),
+            (11, 5),
+            (12, 5),
+            # Children of 6
+            (12, 6),
+            (13, 6),
+            (14, 6),
+            # Children of 7
+            (14, 7),
+            (15, 7),
+            # Children of 8
+            (15, 8),
+            (16, 8),
+            (17, 8),
+            # Children of 9
+            (17, 9),
+            (18, 9),
+            # Children of 10
+            (18, 10),
+            (19, 10),
+        ],
+        tile_view={"center_x": 5, "center_y": 3, "width": 20, "height": 12},
+    )
+
+    domain_2 = Domain(
+        suffix="_2",
+        quadrangle=quadrangle_2,
+        chambers=[
+            (0, 1, 7),
+            (1, 7, 6),
+            (1, 6, 8),
+            (4, 6, 8),
+            (4, 5, 6),
+            (1, 2, 8),
+            (2, 4, 8),
+            (2, 3, 4),
+        ],
+        edges=[
+            # s0
+            (0, 7, "s0"),  # A
+            (6, 7, "s0"),  # B
+            (5, 6, "s0"),  # E
+            (2, 3, "s0"),  # H
+            (2, 8, "s0"),  # FG
+            (6, 8, "s0"),  # CD
+            # s1
+            (0, 1, "s1"),  # A
+            (1, 2, "s1"),  # F
+            (2, 4, "s1"),  # GH
+            (1, 6, "s1"),  # BC
+            (4, 6, "s1"),  # DE
+            # s2
+            (3, 4, "s2"),  # H
+            (4, 5, "s2"),  # E
+            (1, 7, "s2"),  # AB
+            (1, 8, "s2"),  # FC
+            (4, 8, "s2"),  # GD
+        ],
+        polygons=[
+            ([0, 1, 7], "triangle"),
+            ([1, 4, 5, 7], "quadrangle"),
+            ([1, 3, 4], "triangle2"),
+        ],
+        identifications=[
+            ((0, 3), (0, 3), False),
+            ((0, 5), (0, 5), False),
+            ((4, 3), (4, 5), True),
+        ],
+        tile_boundary_edges=[
+            (0, 3, "side"),
+            (0, 5, "side"),
+            (4, 3, "side"),
+            (4, 5, "side"),
+            (0, 3, "gen1"),
+            (0, 5, "gen2"),
+            (4, 3, "gen3"),
+        ],
+        construction_steps=[
+            (1, None),
+            (1, 1),
+            (2, 1),
+            (3, 1),
+            (4, 1),
+            # Children of 2
+            (4, 2),
+            (5, 2),
+            (6, 2),
+            # Children of 3
+            (6, 3),
+            (7, 3),
+            (8, 3),
+            # Children of 4
+            (8, 4),
+            (9, 4),
+            (10, 4),
+            # Children of 5
+            (10, 5),
+            (11, 5),
+            (12, 5),
+            # Children of 6
+            (12, 6),
+            (13, 6),
+            (14, 6),
+            # Children of 7
+            (14, 7),
+            (15, 7),
+            # Children of 8
+            (15, 8),
+            (16, 8),
+            (17, 8),
+            # Children of 9
+            (17, 9),
+            (18, 9),
+            # Children of 10
+            (18, 10),
+            (19, 10),
+        ],
+        tile_view={"center_x": 5, "center_y": 4, "width": 20, "height": 14},
+    )
+
+    return {"1": domain_1, "2": domain_2}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -480,6 +696,12 @@ def main():
         default="all",
         help="which output(s) to generate (default: all)",
     )
+    parser.add_argument(
+        "--domain",
+        choices=["1", "2", "all"],
+        default="all",
+        help="which fundamental domain to generate (default: all)",
+    )
     args = parser.parse_args()
 
     x_range = [0.2, 0.8]
@@ -489,89 +711,49 @@ def main():
         for i in range(x_count)
     ]
 
-    edges = [
-        (0, 4, "s0"),
-        (4, 6, "s0"),
-        (6, 5, "s0"),
-        (5, 7, "s0"),
-        (7, 1, "s1"),
-        (0, 2, "s1"),
-        (1, 8, "s2"),
-        (8, 3, "s2"),
-        (2, 9, "s2"),
-        (9, 3, "s2"),
-        (4, 2, "s2"),
-        (5, 3, "s2"),
-        (2, 6, "s1"),
-        (6, 9, "s0"),
-        (3, 6, "s1"),
-        (3, 7, "s1"),
-        (7, 8, "s0"),
-    ]
-
-    polygons = [
-        ([0, 4, 2], "triangle"),
-        ([4, 2, 3, 5], "quadrangle"),
-        ([5, 3, 1], "triangle2"),
-    ]
-
-    identifications = [
-        ((0, 1), (0, 1), False),
-        ((0, 2), (0, 2), False),
-        ((3, 1), (3, 2), True),
-    ]
-
-    tile_boundary_edges = [
-        (0, 1, "side"),
-        (0, 2, "side"),
-        (2, 3, "side"),
-        (1, 3, "side"),
-        (0, 1, "gen1"),
-        (0, 2, "gen2"),
-        (2, 3, "gen3"),
-    ]
+    domains = build_domains()
+    selected_domains = (
+        list(domains.values()) if args.domain == "all" else [domains[args.domain]]
+    )
 
     OUTPUT_DIR.mkdir(exist_ok=True)
 
-    if args.mode in ("tile", "all"):
-        content = render_tile_frames(x_values, edges, polygons)
-        path = OUTPUT_DIR / "p31m_tile.tex"
-        path.write_text(wrap_standalone(content))
-        print(f"Wrote {path}")
+    for domain in selected_domains:
+        if args.mode in ("tile", "all"):
+            content = render_tile_frames(x_values, domain)
+            path = output_path(domain, "tile")
+            path.write_text(wrap_standalone(content))
+            print(f"Wrote {path}")
 
-    if args.mode in ("tiling", "all"):
-        content = render_tiling_frames(x_values, edges, polygons, identifications)
-        path = OUTPUT_DIR / "p31m_tiling.tex"
-        path.write_text(wrap_standalone(content))
-        print(f"Wrote {path}")
+        if args.mode in ("tiling", "all"):
+            content = render_tiling_frames(x_values, domain)
+            path = output_path(domain, "tiling")
+            path.write_text(wrap_standalone(content))
+            print(f"Wrote {path}")
 
-    if args.mode in ("quadrangle", "all"):
-        content = render_quadrangle_frames(x_values)
-        path = OUTPUT_DIR / "p31m_quadrangle.tex"
-        path.write_text(wrap_standalone(content))
-        print(f"Wrote {path}")
+        if args.mode in ("quadrangle", "all"):
+            content = render_quadrangle_frames(x_values, domain)
+            path = output_path(domain, "quadrangle")
+            path.write_text(wrap_standalone(content))
+            print(f"Wrote {path}")
 
-    if args.mode in ("chambers", "all"):
-        content = render_quadrangle_with_chambers_frames(x_values, edges, polygons)
-        path = OUTPUT_DIR / "p31m_chambers.tex"
-        path.write_text(wrap_standalone(content))
-        print(f"Wrote {path}")
+        if args.mode in ("chambers", "all"):
+            content = render_quadrangle_with_chambers_frames(x_values, domain)
+            path = output_path(domain, "chambers")
+            path.write_text(wrap_standalone(content))
+            print(f"Wrote {path}")
 
-    if args.mode in ("construction", "all"):
-        content = render_tiling_construction_frames(
-            edges + tile_boundary_edges, polygons, identifications
-        )
-        path = OUTPUT_DIR / "p31m_tiling_construction.tex"
-        path.write_text(wrap_standalone(content))
-        print(f"Wrote {path}")
+        if args.mode in ("construction", "all"):
+            content = render_tiling_construction_frames(domain)
+            path = output_path(domain, "tiling_construction")
+            path.write_text(wrap_standalone(content))
+            print(f"Wrote {path}")
 
-    if args.mode in ("construction_beamer", "all"):
-        content = render_tiling_construction_beamer_frames(
-            edges + tile_boundary_edges, polygons, identifications
-        )
-        path = OUTPUT_DIR / "p31m_tiling_construction_beamer.tex"
-        path.write_text(wrap_beamer(content))
-        print(f"Wrote {path}")
+        if args.mode in ("construction_beamer", "all"):
+            content = render_tiling_construction_beamer_frames(domain)
+            path = output_path(domain, "tiling_construction_beamer")
+            path.write_text(wrap_beamer(content))
+            print(f"Wrote {path}")
 
 
 if __name__ == "__main__":

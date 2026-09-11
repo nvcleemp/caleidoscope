@@ -3,22 +3,30 @@
 Animates a wallpaper-group-p31m tiling (triangular fundamental domain with
 reflections) as its shape parameter `x` sweeps across a range, producing
 LaTeX documents — each a sequence of standalone TikZ pictures, one per frame,
-suitable for compiling into an animation:
+suitable for compiling into an animation. The same tiling is generated from
+two different fundamental-domain gluings (`--domain 1`, the original
+construction, and `--domain 2`, an alternate one); domain 2's files get a
+`_2` suffix:
 
-- `output/tile.tex` — the isolated fundamental tile, unfolded.
-- `output/tiling.tex` — the resulting periodic tiling.
-- `output/quadrangle.tex` — the isolated base quadrangle, with construction
-  annotations.
-- `output/chambers.tex` — the isolated tile with polygon fills suppressed and
-  each chamber labeled with its number.
+- `output/p31m_tile[_2].tex` — the isolated fundamental tile, unfolded.
+- `output/p31m_tiling[_2].tex` — the resulting periodic tiling.
+- `output/p31m_quadrangle[_2].tex` — the isolated base quadrangle, with
+  construction annotations.
+- `output/p31m_chambers[_2].tex` — the isolated tile with polygon fills
+  suppressed and each chamber labeled with its number.
+- `output/p31m_tiling_construction[_2].tex` — a fixed-shape tiling built up
+  one tile at a time, in construction order.
+- `output/p31m_tiling_construction_beamer[_2].tex` — the same construction
+  sequence as a single beamer frame using `\only<>` overlays instead of one
+  picture per step.
 
 Run with:
 
 ```bash
-uv run --package p31m-tiling python examples/p31m_tiling/main.py --mode {tile,tiling,quadrangle,chambers,all}
+uv run --package p31m-tiling python examples/p31m_tiling/main.py --mode {tile,tiling,quadrangle,chambers,construction,construction_beamer,all} --domain {1,2,all}
 ```
 
-`--mode` defaults to `all`. See `--help` for details.
+`--mode` and `--domain` both default to `all`. See `--help` for details.
 
 ## Building videos
 
