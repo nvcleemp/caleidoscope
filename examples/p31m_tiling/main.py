@@ -58,6 +58,9 @@ class Domain:
     # tile currently spawning children (or no highlight, if `owner` is None).
     construction_steps: list
     tile_view: dict
+    # Vertex indices (into a tile's own vertex list) whose barycenter is used
+    # to place that tile's number label in the construction frames.
+    tile_label_ref_group: tuple
 
 
 def barycenter(points):
@@ -360,7 +363,8 @@ def render_tiling_construction_frames(domain: Domain) -> str:
         )
         labels = "\n".join(
             f"\\node[circle, draw=none, fill=white, minimum size=10pt, inner sep=1pt] "
-            f"at ({barycenter([tile.vertices[p] for p in (2, 3, 4, 5)])[0]},{barycenter([tile.vertices[p] for p in (2, 3, 4, 5)])[1]}) "
+            f"at ({barycenter([tile.vertices[p] for p in domain.tile_label_ref_group])[0]},"
+            f"{barycenter([tile.vertices[p] for p in domain.tile_label_ref_group])[1]}) "
             f"{{\\scriptsize {i}}};"
             for i, tile in enumerate(tiles[:n], start=1)
         )
@@ -459,7 +463,9 @@ def render_tiling_construction_beamer_frames(domain: Domain) -> str:
         )
         geometry_blocks.append(only(introduced_at[t], total_overlays, body))
 
-        label_x, label_y = barycenter([tile.vertices[p] for p in (2, 3, 4, 5)])
+        label_x, label_y = barycenter(
+            [tile.vertices[p] for p in domain.tile_label_ref_group]
+        )
         label = (
             f"\\node[circle, draw=none, fill=white, minimum size=10pt, inner sep=1pt] "
             f"at ({label_x},{label_y}) {{\\scriptsize {t}}};"
@@ -579,6 +585,7 @@ def build_domains() -> dict:
             (19, 10),
         ],
         tile_view={"center_x": 5, "center_y": 3, "width": 20, "height": 12},
+        tile_label_ref_group=(2, 3, 4, 5),
     )
 
     domain_2 = Domain(
@@ -675,6 +682,7 @@ def build_domains() -> dict:
             (19, 10),
         ],
         tile_view={"center_x": 5, "center_y": 4, "width": 20, "height": 14},
+        tile_label_ref_group=(0, 3, 4, 5),
     )
 
     return {"1": domain_1, "2": domain_2}
