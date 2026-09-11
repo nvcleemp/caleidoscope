@@ -639,7 +639,7 @@ def build_domains() -> dict:
             (4, 5, "side"),
             (0, 3, "gen1"),
             (0, 5, "gen2"),
-            (4, 3, "gen3"),
+            (4, 5, "gen3"),
         ],
         construction_steps=[
             (1, None),
@@ -677,9 +677,9 @@ def build_domains() -> dict:
             # Children of 9
             (17, 9),
             (18, 9),
-            # Children of 10
-            (18, 10),
-            (19, 10),
+            (19, 9),
+            # Done
+            (19, None),
         ],
         tile_view={"center_x": 5, "center_y": 4, "width": 20, "height": 14},
         tile_label_ref_group=(0, 3, 4, 5),
