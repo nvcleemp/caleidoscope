@@ -4,15 +4,15 @@ starting from the bare square, each step adds edges that split it into more
 polygons, and may restyle edges/polygons already present.
 
 The square's four corners (vertices 1,2,3,4 in cyclic order, 0-indexed here
-as 0,1,2,3) are glued by two orientation-preserving generators:
-  - side 1,2 -> side 1,4
-  - side 3,2 -> side 3,4
-These identifications are fixed for every step; only the interior edges,
-polygons, and styles change between steps.
+as 0,1,2,3) can be glued in several ways (see IDENTIFICATIONS_LIST); each
+gluing is a fixed identification for every step, and only the interior
+edges, polygons, and styles change between steps. Every gluing in
+IDENTIFICATIONS_LIST is rendered separately (`--identifications`);
+identification set 2 and up get a `_N` suffix on their output files.
 
-Generates two LaTeX documents: a sequence of standalone TikZ pictures (one
-per step, for `make videos`), and the same sequence as a single beamer frame
-using `\\only<n>` overlays.
+Generates two LaTeX documents per identification set: a sequence of
+standalone TikZ pictures (one per step, for `make videos`), and the same
+sequence as a single beamer frame using `\\only<n>` overlays.
 """
 
 import argparse
@@ -51,15 +51,14 @@ VERTICES = [
     (0.5, 0.0),  # 11 (midpoint edge 1)
 ]
 
-# Generators: side 1,2 -> side 1,4 and side 3,2 -> side 3,4, both
-# orientation-preserving. Fixed regardless of how VERTICES/edges/polygons
-# grow across steps.
+# Alternative gluings of the square's sides, each rendered as its own set
+# of outputs. Fixed per identification set regardless of how
+# VERTICES/edges/polygons grow across steps.
 IDENTIFICATIONS_LIST = [
-    [(e, e, False) for e in ((1, 2), (2, 3))] + [((0, 1), (0,3), True)],
+    [(e, e, False) for e in ((1, 2), (2, 3))] + [((0, 1), (0, 3), True)],
     [(e, e, False) for e in ((0, 1), (1, 2), (2, 3), (3, 0))],
-    [((0, 1), (0, 3), True), ((2, 1), (2, 3), True)]
+    [((0, 1), (0, 3), True), ((2, 1), (2, 3), True)],
 ]
-IDENTIFICATIONS = IDENTIFICATIONS_LIST[0]
 
 ANNOTATION_STYLES = {
     "side": "gray, thick",
@@ -278,7 +277,10 @@ def wrap_beamer(content):
 """
 
 
-def render_step(step: Step) -> str:
+def render_step(
+    step: Step,
+    identifications: list[tuple[tuple[int, int], tuple[int, int], bool]],
+) -> str:
     """Render a single step as one tikzpicture's worth of TikZ commands."""
     styles = {**ANNOTATION_STYLES, **step.style_overrides}
     renderer = caleidoscope.TikzRenderer(styles)
@@ -288,7 +290,7 @@ def render_step(step: Step) -> str:
         polygons=step.polygons,
         center=(VIEW["tile_center_x"], VIEW["tile_center_y"]),
         tolerance=0.1,
-        identifications=IDENTIFICATIONS,
+        identifications=identifications,
     )
     rendered = tiling.render(
         renderer,
@@ -303,24 +305,34 @@ def render_step(step: Step) -> str:
     return rendered + step.extra_tikz
 
 
-def render_steps(steps: list[Step]) -> str:
+def render_steps(
+    steps: list[Step],
+    identifications: list[tuple[tuple[int, int], tuple[int, int], bool]],
+) -> str:
     """Render each step as its own tikzpicture, one after another."""
     content = ""
     for step in steps:
-        content += wrap_tikz_picture(render_step(step))
+        content += wrap_tikz_picture(render_step(step, identifications))
     return content
 
 
-def render_steps_beamer(steps: list[Step]) -> str:
+def render_steps_beamer(
+    steps: list[Step],
+    identifications: list[tuple[tuple[int, int], tuple[int, int], bool]],
+) -> str:
     """Render each step as one overlay of a single tikzpicture: step n is
     visible only on overlay n (not cumulative, since a step may restyle or
     remove content from the previous one rather than only add to it)."""
     total_overlays = len(steps)
     blocks = []
     for n, step in enumerate(steps, start=1):
-        body = render_step(step)
+        body = render_step(step, identifications)
         blocks.append(f"\\only<{n}>{{\n{body}}}\n")
     return wrap_tikz_picture("".join(blocks))
+
+
+def output_path(suffix: str, kind: str) -> Path:
+    return OUTPUT_DIR / f"glue_and_split{kind}{suffix}.tex"
 
 
 def main():
@@ -331,21 +343,37 @@ def main():
         default="all",
         help="which output(s) to generate (default: all)",
     )
+    parser.add_argument(
+        "--identifications",
+        choices=[str(i) for i in range(1, len(IDENTIFICATIONS_LIST) + 1)] + ["all"],
+        default="all",
+        help="which identification set (1-indexed into IDENTIFICATIONS_LIST) "
+        "to generate output for (default: all)",
+    )
     args = parser.parse_args()
 
     OUTPUT_DIR.mkdir(exist_ok=True)
 
-    if args.mode in ("steps", "all"):
-        content = render_steps(STEPS)
-        path = OUTPUT_DIR / "glue_and_split.tex"
-        path.write_text(wrap_standalone(content))
-        print(f"Wrote {path}")
+    selected = (
+        list(enumerate(IDENTIFICATIONS_LIST, start=1))
+        if args.identifications == "all"
+        else [(int(args.identifications), IDENTIFICATIONS_LIST[int(args.identifications) - 1])]
+    )
 
-    if args.mode in ("steps_beamer", "all"):
-        content = render_steps_beamer(STEPS)
-        path = OUTPUT_DIR / "glue_and_split_beamer.tex"
-        path.write_text(wrap_beamer(content))
-        print(f"Wrote {path}")
+    for n, identifications in selected:
+        suffix = "" if n == 1 else f"_{n}"
+
+        if args.mode in ("steps", "all"):
+            content = render_steps(STEPS, identifications)
+            path = output_path(suffix, "")
+            path.write_text(wrap_standalone(content))
+            print(f"Wrote {path}")
+
+        if args.mode in ("steps_beamer", "all"):
+            content = render_steps_beamer(STEPS, identifications)
+            path = output_path(suffix, "_beamer")
+            path.write_text(wrap_beamer(content))
+            print(f"Wrote {path}")
 
 
 if __name__ == "__main__":
