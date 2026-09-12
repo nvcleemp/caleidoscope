@@ -195,6 +195,20 @@ def ceil_div(a, b):
     return -(-a // b)
 
 
+def render_symmetry_elements(rotation_centers, glide_axes) -> str:
+    """Render rotation-center dots and glide-axis dashed lines as raw TikZ."""
+    return "\n".join(
+        [
+            f"  \\node[fill=blue, circle, inner sep=1pt] at ({c[0]:.3f}, {c[1]:.3f}) {{}};"
+            for c in rotation_centers
+        ]
+        + [
+            f"  \\draw[blue, thick, dotted] ({a[0][0]:.3f}, {a[0][1]:.3f}) -- ({a[1][0]:.3f}, {a[1][1]:.3f});"
+            for a in glide_axes
+        ]
+    )
+
+
 def render_coloured_tile(vertices, edges, identifications, tolerance, renderer):
     """Render a single tile with its octagon/square faces filled in, cropped to its own footprint."""
     tiling = caleidoscope.Pattern(
@@ -717,16 +731,7 @@ def main():
                     renderer, lambda edge, _: len(edge) == 3 and edge[2] in ["s2"]
                 )
                 + (
-                    "\n".join(
-                        [
-                            f"  \\node[fill=blue, circle, inner sep=1pt] at ({c[0]:.3f}, {c[1]:.3f}) {{}};"
-                            for c in rots
-                        ]
-                        + [
-                            f"  \\draw[blue, thick, dotted] ({a[0][0]:.3f}, {a[0][1]:.3f}) -- ({a[1][0]:.3f}, {a[1][1]:.3f});"
-                            for a in axes
-                        ]
-                    )
+                    render_symmetry_elements(rots, axes)
                     if draw_symmetry_elements
                     else ""
                 )
@@ -823,11 +828,20 @@ def main():
             tolerance=0.05,
             identifications=identifications,
         )
+        base_tiling = pattern.render(
+            renderer, margin=2, edge_filter=lambda edge, _: edge[2] == "s2", width=16, height=16
+        )
         write_standalone_tex(
             OUTPUT_DIR / filename,
-            wrap_tikz_picture(
-                pattern.render(renderer, margin=2, edge_filter=lambda edge, _: edge[2] == "s2", width=16, height=16)
-            ),
+            wrap_tikz_picture(base_tiling),
+        )
+
+        rots, axes = generate_pgg_symmetries_simple(
+            [g.classify() for g in pattern.generators], (-8, -8, 8, 8)
+        )
+        write_standalone_tex(
+            OUTPUT_DIR / f"{filename.removesuffix('.tex')}_symm.tex",
+            wrap_tikz_picture(base_tiling + render_symmetry_elements(rots, axes)),
         )
 
     # The octagon/quadrangle spokes are the same regardless of which edges
