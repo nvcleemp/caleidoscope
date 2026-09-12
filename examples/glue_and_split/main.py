@@ -16,6 +16,7 @@ using `\\only<n>` overlays.
 """
 
 import argparse
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -63,12 +64,21 @@ ANNOTATION_STYLES = {
 @dataclass
 class Step:
     """One frame of the construction: the edges/polygons visible at this
-    point, plus any style overrides layered on top of ANNOTATION_STYLES."""
+    point, plus any style overrides layered on top of ANNOTATION_STYLES.
+
+    edge_filter/polygon_filter, if given, are passed straight through to
+    Pattern.render (signature: (edge_or_polygon, tile) -> bool) so a step
+    can e.g. hide edges/polygons of a given annotation without removing
+    them from `edges`/`polygons`."""
 
     label: str
     edges: list[tuple[int, int, str]]
     polygons: list[tuple[list[int], str]]
     style_overrides: dict[str, str] = field(default_factory=dict)
+    edge_filter: Callable[[tuple[int, int, str], caleidoscope.Tile], bool] | None = None
+    polygon_filter: (
+        Callable[[tuple[tuple[int, ...], str], caleidoscope.Tile], bool] | None
+    ) = None
 
 
 STEPS: list[Step] = [
@@ -135,6 +145,8 @@ def render_step(step: Step) -> str:
         width=VIEW["width"],
         height=VIEW["height"],
         margin=VIEW["margin"],
+        edge_filter=step.edge_filter,
+        polygon_filter=step.polygon_filter,
     )
 
 
