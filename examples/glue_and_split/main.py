@@ -69,6 +69,7 @@ ANNOTATION_STYLES = {
     "tile2": "draw=none, fill=yellow!20",
     "tile3": "draw=none, fill=teal!20",
     "cut": "draw=red, thick, densely dotted",
+    "glue": "draw=red, thick, densely dotted",
 }
 
 
@@ -221,8 +222,11 @@ STEPS = [
     BASE_STEPS[1],
     replace(BASE_STEPS[1], edge_filter=lambda e, t: e[2] != "cut" or is_tile_one(t)),
     BASE_STEPS[2],
+    replace(BASE_STEPS[2], extra_tikz=f"  \\draw[{ANNOTATION_STYLES['glue']}] (0,0) circle [radius=0.2];\n"),
     BASE_STEPS[3],
+    replace(BASE_STEPS[3], extra_tikz=f"  \\draw[{ANNOTATION_STYLES['glue']}] (.25,1) circle [radius=0.2];\n"),
     BASE_STEPS[4],
+    replace(BASE_STEPS[4], extra_tikz=f"  \\draw[{ANNOTATION_STYLES['glue']}] (1,1) circle [radius=0.2];\n"),
     BASE_STEPS[5],
 ]
 
