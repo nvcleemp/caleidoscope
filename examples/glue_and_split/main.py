@@ -17,7 +17,7 @@ using `\\only<n>` overlays.
 
 import argparse
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import caleidoscope
@@ -92,7 +92,7 @@ class Step:
     ) = None
 
 
-STEPS: list[Step] = [
+BASE_STEPS: list[Step] = [
     Step(
         label="square",
         edges=[
@@ -102,11 +102,123 @@ STEPS: list[Step] = [
             (3, 0, "side"),
             (4, 5, "mark"),
             (5, 6, "mark"),
+            (1, 7, "cut"),
         ],
         polygons=[
             ([0, 1, 2, 3], "square"),
         ],
+        edge_filter=lambda e, t: e[2] != "cut",
     ),
+    Step(
+        label="square",
+        edges=[
+            (0, 1, "side"),
+            (1, 2, "side"),
+            (2, 3, "side"),
+            (3, 0, "side"),
+            (4, 5, "mark"),
+            (5, 6, "mark"),
+            (1, 7, "side"),
+            (8, 9, "cut"),
+        ],
+        polygons=[
+            ([1, 2, 3, 7], "tile1"),
+            ([0, 1, 7], "tile2"),
+        ],
+        edge_filter=lambda e, t: e[2] != "cut",
+    ),
+    Step(
+        label="square",
+        edges=[
+            (0, 1, "side"),
+            (1, 2, "side"),
+            (2, 3, "side"),
+            (3, 0, "side"),
+            (4, 5, "mark"),
+            (5, 6, "mark"),
+            (1, 7, "side"),
+            (8, 9, "side"),
+            (10, 1, "side"),
+        ],
+        polygons=[
+            ([1, 2, 8, 9], "tile1"),
+            ([0, 1, 7], "tile2"),
+            ([3, 7, 9, 8], "tile3"),
+        ],
+        edge_filter=lambda e, t: e[2] != "cut",
+    ),
+    Step(
+        label="square",
+        edges=[
+            (1, 2, "side"),
+            (2, 3, "side"),
+            (3, 7, "side"),
+            (4, 5, "mark"),
+            (5, 6, "mark"),
+            (1, 7, "side"),
+            (8, 9, "side"),
+            (10, 1, "side"),
+        ],
+        polygons=[
+            ([1, 2, 8, 9], "tile1"),
+            ([0, 1, 7], "tile2"),
+            ([3, 7, 9, 8], "tile3"),
+        ],
+    ),
+    Step(
+        label="square",
+        edges=[
+            (1, 2, "side"),
+            (2, 8, "side"),
+            (3, 7, "side"),
+            (4, 5, "mark"),
+            (5, 6, "mark"),
+            (1, 7, "side"),
+            (8, 9, "side"),
+            (10, 1, "side"),
+        ],
+        polygons=[
+            ([1, 2, 8, 9], "tile1"),
+            ([0, 1, 7], "tile2"),
+            ([3, 7, 9, 8], "tile3"),
+        ],
+    ),
+    Step(
+        label="square",
+        edges=[
+            (3, 7, "side"),
+            (4, 5, "mark"),
+            (5, 6, "mark"),
+            (1, 7, "side"),
+            (8, 9, "side"),
+            (10, 1, "side"),
+        ],
+        polygons=[
+            ([1, 2, 8, 9], "tile1"),
+            ([0, 1, 7], "tile2"),
+            ([3, 7, 9, 8], "tile3"),
+        ],
+    ),
+]
+
+def is_tile_one(tile: caleidoscope.Tile) -> bool:
+    xmax, xmin, ymax, ymin = (
+        max(v[0] for v in tile.vertices),
+        min(v[0] for v in tile.vertices),
+        max(v[1] for v in tile.vertices),
+        min(v[1] for v in tile.vertices),
+    )
+    return xmax == 1 and xmin == 0 and ymax == 1 and ymin == 0
+
+STEPS = [
+    BASE_STEPS[0],
+    replace(BASE_STEPS[0], edge_filter=lambda e, t: e[2] != "cut" or is_tile_one(t)),
+    BASE_STEPS[1],
+    replace(BASE_STEPS[1], edge_filter=lambda e, t: e[2] != "cut" or is_tile_one(t)),
+    BASE_STEPS[2],
+    BASE_STEPS[3],
+    BASE_STEPS[4],
+    BASE_STEPS[5],
 ]
 
 
