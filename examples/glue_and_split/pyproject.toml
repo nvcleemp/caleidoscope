@@ -1,0 +1,12 @@
+[project]
+name = "glue-and-split"
+version = "0.1.0"
+description = "Wallpaper pattern built up step by step from a glued square fundamental domain"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "caleidoscope",
+]
+
+[tool.uv.sources]
+caleidoscope = { workspace = true }
