@@ -80,7 +80,11 @@ class Step:
     edge_filter/polygon_filter, if given, are passed straight through to
     Pattern.render (signature: (edge_or_polygon, tile) -> bool) so a step
     can e.g. hide edges/polygons of a given annotation without removing
-    them from `edges`/`polygons`."""
+    them from `edges`/`polygons`.
+
+    extra_tikz, if given, is raw TikZ source appended after the rendered
+    pattern, inside the same tikzpicture (e.g. for one-off annotations
+    that don't fit the edges/polygons/identifications model)."""
 
     label: str
     edges: list[tuple[int, int, str]]
@@ -90,6 +94,7 @@ class Step:
     polygon_filter: (
         Callable[[tuple[tuple[int, ...], str], caleidoscope.Tile], bool] | None
     ) = None
+    extra_tikz: str = ""
 
 
 BASE_STEPS: list[Step] = [
@@ -261,7 +266,7 @@ def render_step(step: Step) -> str:
         tolerance=0.1,
         identifications=IDENTIFICATIONS,
     )
-    return tiling.render(
+    rendered = tiling.render(
         renderer,
         center_x=VIEW["center_x"],
         center_y=VIEW["center_y"],
@@ -271,6 +276,7 @@ def render_step(step: Step) -> str:
         edge_filter=step.edge_filter,
         polygon_filter=step.polygon_filter,
     )
+    return rendered + step.extra_tikz
 
 
 def render_steps(steps: list[Step]) -> str:
