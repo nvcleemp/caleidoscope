@@ -831,9 +831,9 @@ def main():
         )
 
     # The octagon/quadrangle spokes are the same regardless of which edges
-    # form the underlying p31m quadrangle grid, so they are shared between
+    # form the underlying pgg quadrangle grid, so they are shared between
     # the start and end edge lists below.
-    base_p31m_spoke_edges = [
+    base_pgg_spoke_edges = [
         (10, 1, "s1"),
         (10, 2, "s1"),
         (10, 3, "s1"),
@@ -860,7 +860,7 @@ def main():
         (11, 22, "s0"),
     ]
 
-    base_p31m_edges_start = [
+    base_pgg_edges_start = [
         (0, 1, "s2base"),
         (1, 2, "s2base"),
         (2, 3, "s2base"),
@@ -872,9 +872,9 @@ def main():
         (8, 9, "s2base"),
         (9, 0, "s2"),
         (1, 8, "s2"),
-    ] + base_p31m_spoke_edges
+    ] + base_pgg_spoke_edges
 
-    base_p31m_edges_end = [
+    base_pgg_edges_end = [
         (0, 1, "s2"),
         (1, 2, "s2base"),
         (2, 3, "s2base"),
@@ -886,20 +886,20 @@ def main():
         (8, 9, "s2"),
         (9, 0, "s2"),
         (1, 8, "s2base"),
-    ] + base_p31m_spoke_edges
+    ] + base_pgg_spoke_edges
 
-    base_p31m_tilings_input = [
-        ("base_p31m_starting_tiling.tex", vertices_starting_point_rotated, base_p31m_edges_start),
-        ("base_p31m_end_tiling.tex", [(x / 1.5, y / 1.5) for (x, y) in vertices_end_point_rotated], base_p31m_edges_end),
-        ("base_p31m_starting_tiling_aligned.tex", vertices_starting_point_aligned, base_p31m_edges_start),
-        ("base_p31m_end_tiling_aligned.tex", vertices_end_point_aligned, base_p31m_edges_end),
+    base_pgg_tilings_input = [
+        ("base_pgg_starting_tiling.tex", vertices_starting_point_rotated, base_pgg_edges_start),
+        ("base_pgg_end_tiling.tex", [(x / 1.5, y / 1.5) for (x, y) in vertices_end_point_rotated], base_pgg_edges_end),
+        ("base_pgg_starting_tiling_aligned.tex", vertices_starting_point_aligned, base_pgg_edges_start),
+        ("base_pgg_end_tiling_aligned.tex", vertices_end_point_aligned, base_pgg_edges_end),
     ]
 
     # Only "s2base" edges are ever drawn (see edge_filter below), so that is
     # the only style this renderer needs.
     base_renderer = caleidoscope.TikzRenderer({"s2base": "black, thick"})
 
-    for filename, vertices, tile_edges in base_p31m_tilings_input:
+    for filename, vertices, tile_edges in base_pgg_tilings_input:
         pattern = caleidoscope.Pattern(
             vertices=vertices,
             edges=tile_edges,
