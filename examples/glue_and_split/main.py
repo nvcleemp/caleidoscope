@@ -205,6 +205,23 @@ BASE_STEPS: list[Step] = [
             ([3, 7, 9, 8], "tile3"),
         ],
     ),
+    Step(
+        label="square",
+        edges=[
+            (1, 2, "side"),
+            (3, 7, "side"),
+            (4, 5, "mark"),
+            (5, 6, "mark"),
+            (1, 7, "side"),
+            (8, 9, "side"),
+            (10, 1, "side"),
+        ],
+        polygons=[
+            ([1, 2, 8, 9], "tile1"),
+            ([0, 1, 7], "tile2"),
+            ([3, 7, 9, 8], "tile3"),
+        ],
+    ),
 ]
 
 def is_tile_one(tile: caleidoscope.Tile) -> bool:
@@ -228,6 +245,9 @@ STEPS = [
     BASE_STEPS[4],
     replace(BASE_STEPS[4], extra_tikz=f"  \\draw[{ANNOTATION_STYLES['glue']}] (1,1) circle [radius=0.2];\n"),
     BASE_STEPS[5],
+    BASE_STEPS[4],
+    replace(BASE_STEPS[4], extra_tikz=f"  \\draw[{ANNOTATION_STYLES['glue']}] (.75,1) circle [radius=0.2];\n"),
+    BASE_STEPS[6],
 ]
 
 
