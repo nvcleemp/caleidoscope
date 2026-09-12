@@ -27,8 +27,8 @@ OUTPUT_DIR = Path(__file__).parent / "output"
 VIEW = {
     "tile_center_x": 0.5,
     "tile_center_y": 0.5,
-    "center_x": 3,
-    "center_y": 3,
+    "center_x": 2,
+    "center_y": 2,
     "width": 6,
     "height": 6,
     "margin": -.1,
@@ -45,19 +45,30 @@ VERTICES = [
     (0.9, 0.7),  # 5 (mark)
     (0.9, 0.9),  # 6 (mark)
     (0.8, 0.8),  # 7 (mark)
+    (0.0, 0.5),  # 8 (split 1 endpoint)
+    (0.5, 1.0),  # 9 (split 2 endpoint)
+    (0.5, 0.25), # 10 (split 2 endpoint)
+    (0.5, 0.0),  # 11 (midpoint edge 1)
 ]
 
 # Generators: side 1,2 -> side 1,4 and side 3,2 -> side 3,4, both
 # orientation-preserving. Fixed regardless of how VERTICES/edges/polygons
 # grow across steps.
-IDENTIFICATIONS = [
-    (e, e, False) for e in ((0, 1), (1, 2), (2, 3), (3, 0))
+IDENTIFICATIONS_LIST = [
+    [(e, e, False) for e in ((1, 2), (2, 3))] + [((0, 1), (0,3), True)],
+    [(e, e, False) for e in ((0, 1), (1, 2), (2, 3), (3, 0))],
+    [((0, 1), (0, 3), True), ((2, 1), (2, 3), True)]
 ]
+IDENTIFICATIONS = IDENTIFICATIONS_LIST[0]
 
 ANNOTATION_STYLES = {
     "side": "gray, thick",
     "square": "draw=none, fill=blue!20",
     "mark": "draw=blue, ultra thin",
+    "tile1": "draw=none, fill=blue!20",
+    "tile2": "draw=none, fill=yellow!20",
+    "tile3": "draw=none, fill=teal!20",
+    "cut": "draw=red, thick, densely dotted",
 }
 
 
