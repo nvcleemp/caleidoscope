@@ -709,15 +709,43 @@ def main():
         for p in range(1, alignment_steps)
     ]
 
-    def construct_tiling_renderer(draw_barycenter: bool, draw_symmetry_elements: bool):
+    def construct_tiling_renderer(
+        draw_barycenter: bool, draw_symmetry_elements: bool, coloured: bool
+    ):
         def render_tiling(
-            tiling: caleidoscope.Pattern, renderer: caleidoscope.TikzRenderer
+            tiling: caleidoscope.Pattern,
+            renderer: caleidoscope.TikzRenderer,
+            coloured_renderer: caleidoscope.TikzRenderer,
         ) -> str:
             cp = tiling.construct(width=16, height=16)
             gs = tiling.generators
             rots, axes = generate_pgg_symmetries_simple(
                 [g.classify() for g in gs], (-8, -8, 8, 8)
             )
+
+            if coloured:
+                coloured_pattern = caleidoscope.Pattern(
+                    vertices=tiling.vertices,
+                    edges=tiling.edges,
+                    polygons=[
+                        ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "octagon"),
+                        ([0, 1, 8, 9], "square"),
+                    ],
+                    center=tiling.vertices[10],
+                    tolerance=tolerance,
+                    identifications=tiling.identifications,
+                )
+                margin = 3
+                main_render = coloured_pattern.construct(width=14 + 2*margin, height=14 + 2*margin).render(
+                    coloured_renderer,
+                    lambda edge, _: len(edge) == 3 and edge[2] == "s2",
+                    margin=margin,
+                )
+            else:
+                main_render = cp.render(
+                    renderer, lambda edge, _: len(edge) == 3 and edge[2] in ["s2"]
+                )
+
             return (
                 (
                     cp.render(
@@ -727,9 +755,7 @@ def main():
                     if draw_barycenter
                     else ""
                 )
-                + cp.render(
-                    renderer, lambda edge, _: len(edge) == 3 and edge[2] in ["s2"]
-                )
+                + main_render
                 + (
                     render_symmetry_elements(rots, axes)
                     if draw_symmetry_elements
@@ -749,16 +775,24 @@ def main():
         }
     )
 
+    coloured_renderer = caleidoscope.TikzRenderer(
+        {
+            "s2": "black, thick",
+            "square": "fill=teal",
+            "octagon": "fill=orange",
+        }
+    )
+
     # align: include the rotation/rescale transition frames at each end,
     # not to be confused with the "_aligned" tilings, which are always included.
-    for bary, symm, align in itertools.product([True, False], repeat=3):
+    for bary, symm, align, coloured in itertools.product([True, False], repeat=4):
         tiling_renderer = construct_tiling_renderer(
-            draw_barycenter=bary, draw_symmetry_elements=symm
+            draw_barycenter=bary, draw_symmetry_elements=symm, coloured=coloured
         )
 
         path = (
             OUTPUT_DIR
-            / f"animation{'_bary' if bary else ''}{'_symm' if symm else ''}{'_align' if align else ''}.tex"
+            / f"animation{'_bary' if bary else ''}{'_symm' if symm else ''}{'_align' if align else ''}{'_coloured' if coloured else ''}.tex"
         )
         tilings = (
             (
@@ -781,19 +815,13 @@ def main():
             path,
             "\n\n".join(
                 [
-                    wrap_tikz_picture(tiling_renderer(tiling, renderer))
+                    wrap_tikz_picture(
+                        tiling_renderer(tiling, renderer, coloured_renderer)
+                    )
                     for tiling in tilings
                 ]
             ),
         )
-
-    coloured_renderer = caleidoscope.TikzRenderer(
-        {
-            "s2": "black, thick",
-            "square": "fill=teal",
-            "octagon": "fill=orange",
-        }
-    )
 
     coloured_tilings_input = [
         ("coloured_starting_tiling.tex", vertices_starting_point_rotated),
