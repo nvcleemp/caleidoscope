@@ -844,6 +844,18 @@ def main():
             wrap_tikz_picture(base_tiling + render_symmetry_elements(rots, axes)),
         )
 
+        bary_tiling = pattern.render(
+            renderer,
+            margin=2,
+            edge_filter=lambda edge, _: edge[2] in ("s0", "s1", "s2"),
+            width=16,
+            height=16,
+        )
+        write_standalone_tex(
+            OUTPUT_DIR / f"{filename.removesuffix('.tex')}_bary.tex",
+            wrap_tikz_picture(bary_tiling),
+        )
+
     # The octagon/quadrangle spokes are the same regardless of which edges
     # form the underlying pgg quadrangle grid, so they are shared between
     # the start and end edge lists below.
