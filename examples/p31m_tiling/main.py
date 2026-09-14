@@ -35,6 +35,8 @@ ANNOTATION_STYLES = {
     "triangle": "draw=none, fill=blue!20",
     "quadrangle": "draw=none, fill=purple!20",
     "triangle2": "draw=none, fill=orange!20",
+    "chamber0": "draw=none, fill=magenta!30",
+    "chamber1": "draw=none, fill=green!30",
     "side": "gray, ultra thick",
     "gen1": "blue, ultra thick",
     "gen2": "purple, ultra thick",
@@ -240,6 +242,59 @@ def render_quadrangle_with_chambers_frames(x_values, domain: Domain) -> str:
             f"\\node[draw=none] at ({x},{y}) {{${i}$}};" for i, (x, y) in chamber_labels
         )
         content += wrap_tikz_picture(tikz_commands + "\n")
+    return content
+
+
+def bipartite_chamber_colours(chambers: list[tuple[int, ...]]) -> list[int]:
+    """Assign each chamber (a tuple of vertex indices) a colour (0 or 1) such
+    that chambers sharing an edge (i.e. two vertices) get different colours."""
+    adjacency: list[list[int]] = [[] for _ in chambers]
+    for i, chamber_i in enumerate(chambers):
+        vertices_i = set(chamber_i)
+        for j in range(i + 1, len(chambers)):
+            if len(vertices_i & set(chambers[j])) == 2:
+                adjacency[i].append(j)
+                adjacency[j].append(i)
+
+    colours = [-1] * len(chambers)
+    for start in range(len(chambers)):
+        if colours[start] != -1:
+            continue
+        colours[start] = 0
+        queue = [start]
+        while queue:
+            current = queue.pop()
+            for neighbour in adjacency[current]:
+                if colours[neighbour] == -1:
+                    colours[neighbour] = 1 - colours[current]
+                    queue.append(neighbour)
+    return colours
+
+
+def render_quadrangle_with_coloured_chambers_frames(x_values, domain: Domain) -> str:
+    """Render each frame as the isolated tile with each chamber coloured."""
+    chamber_colours = bipartite_chamber_colours(domain.chambers)
+    chamber_polygons = [
+        (chamber, f"chamber{colour}")
+        for chamber, colour in zip(domain.chambers, chamber_colours)
+    ]
+
+    content = ""
+    for x in x_values:
+        vertices = [
+            (TILE_SCALE * vx, TILE_SCALE * vy) for vx, vy in domain.quadrangle(x)
+        ]
+        renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
+        renderer.initialize(**domain.tile_view)
+        tile = caleidoscope.Tile(
+            vertices,
+            domain.edges,
+            chamber_polygons,
+            caleidoscope.Transform2D(),
+            (),
+        )
+        renderer.render_tile(tile)
+        content += wrap_tikz_picture(renderer.finalize() + "\n")
     return content
 
 
@@ -698,6 +753,7 @@ def main():
             "all",
             "quadrangle",
             "chambers",
+            "orientation",
             "construction",
             "construction_beamer",
         ],
@@ -748,6 +804,12 @@ def main():
         if args.mode in ("chambers", "all"):
             content = render_quadrangle_with_chambers_frames(x_values, domain)
             path = output_path(domain, "chambers")
+            path.write_text(wrap_standalone(content))
+            print(f"Wrote {path}")
+
+        if args.mode in ("orientation", "all"):
+            content = render_quadrangle_with_coloured_chambers_frames(x_values, domain)
+            path = output_path(domain, "orientation")
             path.write_text(wrap_standalone(content))
             print(f"Wrote {path}")
 
