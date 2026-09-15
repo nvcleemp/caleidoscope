@@ -74,6 +74,10 @@ uv run --package <package-name> python examples/<directory>/<script>.py
 (usually matching its directory name, with underscores as hyphens). This
 applies to every example, current and future.
 
+For convenience, the root [`Makefile`](Makefile) defines a shorthand target
+per example script, e.g. `make run-basic-classify` or `make run-two-tilings`.
+New scripts need a target added manually.
+
 `examples/basic/` contains small, single-feature demo scripts — see
 [`examples/basic/README.md`](examples/basic/README.md) for what's there.
 
