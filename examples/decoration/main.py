@@ -18,7 +18,7 @@ every step as its own tikzpicture, in order.
 
 import argparse
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import caleidoscope
@@ -36,6 +36,7 @@ ANNOTATION_STYLES = {
     "s0": "teal, ultra thin",
     "s1": "red, ultra thin",
     "s2": "black, thick",
+    "s2old": "gray, thick",
     "face1": "draw=none, fill=blue!20",
     "face2": "draw=none, fill=purple!20",
     "face3": "draw=none, fill=orange!20",
@@ -66,7 +67,7 @@ class Step:
     extra_tikz_tiling: str = ""
 
 
-STEPS: list[Step] = [
+BASE_STEPS: list[Step] = [
     Step(
         label="base",
         edges=[
@@ -100,11 +101,11 @@ STEPS: list[Step] = [
         label="truncation",
         edges=[
             # s2
-            (15, 9, "s2"), 
-            (7, 9, "s2"),  
-            (9, 10, "s2"), 
-            (10, 16, "s2"), 
-            (10, 11, "s2"), 
+            (15, 9, "s2"),
+            (7, 9, "s2"),
+            (9, 10, "s2"),
+            (10, 16, "s2"),
+            (10, 11, "s2"),
             (5, 13, "s2"),
             (13, 11, "s2"),
             (11, 12, "s2"),
@@ -113,11 +114,22 @@ STEPS: list[Step] = [
         polygons=[
             ([0, 15, 9, 7], "face1"),
             ([9, 10, 11, 13, 5, 7], "face2"),
-            ([13, 11, 12, 4], "face3"),
-            ([3, 12, 11, 10, 16], "face4"),
+            ([13, 11, 12, 4], "face4"),
+            ([3, 12, 11, 10, 16], "face3"),
             ([15, 9, 10, 16], "face5"),
         ],
     ),
+]
+
+STEPS: list[Step] = [
+    BASE_STEPS[0],
+    replace(
+        BASE_STEPS[0],
+        label="transition_1",
+        edges=[(v1, v2, "s2old") for v1, v2, l in BASE_STEPS[0].edges if l == "s2"]
+        + BASE_STEPS[1].edges,
+    ),
+    BASE_STEPS[1],
 ]
 
 
@@ -156,6 +168,7 @@ def line_intersection(a1, a2, b1, b2):
     denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
     t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom
     return (x1 + t * (x2 - x1), y1 + t * (y2 - y1))
+
 
 def perpendicular_projection(point, line_start, line_end):
     """Project a point onto a line defined by line_start and line_end."""
@@ -210,8 +223,25 @@ def fundamental_domain(x: float):
     p18 = line_intersection(p4, p16, p12, p14)
 
     return [
-        p0, p1, p2, p3, p4, p5, p6, p7, p8,
-        p9, p10, p11, p12, p13, p14, p15, p16, p17, p18
+        p0,
+        p1,
+        p2,
+        p3,
+        p4,
+        p5,
+        p6,
+        p7,
+        p8,
+        p9,
+        p10,
+        p11,
+        p12,
+        p13,
+        p14,
+        p15,
+        p16,
+        p17,
+        p18,
     ]
 
 
@@ -274,22 +304,26 @@ def render_tiling_steps(steps: list[Step]) -> str:
         # shared boundary with a neighboring tile's fill. A single combined
         # pass would interleave per tile (polygon, edges) and let a later
         # tile's fill cover an earlier tile's edge.
-        rendered = tiling.render(
-            renderer,
-            center_x=bc[0],
-            center_y=bc[1],
-            width=16,
-            height=16,
-            edge_filter=lambda edge, tile: False,
-            polygon_filter=None,
-        ) + "\n" + tiling.render(
-            renderer,
-            center_x=bc[0],
-            center_y=bc[1],
-            width=16,
-            height=16,
-            edge_filter=lambda edge, tile: edge[2] == "s2",
-            polygon_filter=lambda polygon, tile: False,
+        rendered = (
+            tiling.render(
+                renderer,
+                center_x=bc[0],
+                center_y=bc[1],
+                width=16,
+                height=16,
+                edge_filter=lambda edge, tile: False,
+                polygon_filter=None,
+            )
+            + "\n"
+            + tiling.render(
+                renderer,
+                center_x=bc[0],
+                center_y=bc[1],
+                width=16,
+                height=16,
+                edge_filter=lambda edge, tile: edge[2].startswith("s2"),
+                polygon_filter=lambda polygon, tile: False,
+            )
         )
         content += wrap_tikz_picture(rendered + step.extra_tikz_tiling)
     return content
