@@ -510,11 +510,57 @@ def render_tiling_steps(steps: list[Step]) -> str:
     return content
 
 
+def render_tiling_steps_bary(steps: list[Step]) -> str:
+    """Render each step as its own tikzpicture: the full periodic tiling
+    using that step's edges/polygons."""
+    content = ""
+    for step in steps:
+        vertices = [(TILING_SCALE * vx, TILING_SCALE * vy) for vx, vy in VERTICES]
+        bc = barycenter(vertices)
+        renderer = caleidoscope.TikzRenderer(ANNOTATION_STYLES)
+        tiling = caleidoscope.Pattern(
+            vertices=vertices,
+            edges=step.edges,
+            polygons=step.polygons,
+            center=bc,
+            tolerance=0.1,
+            identifications=IDENTIFICATIONS,
+        )
+        # Two passes, not one: this draws every tile's polygon before any
+        # tile's s2 edge, so s2 edges stay on top even where they sit on a
+        # shared boundary with a neighboring tile's fill. A single combined
+        # pass would interleave per tile (polygon, edges) and let a later
+        # tile's fill cover an earlier tile's edge.
+        rendered = (
+            tiling.render(
+                renderer,
+                center_x=bc[0],
+                center_y=bc[1],
+                width=8,
+                height=8,
+                edge_filter=lambda edge, tile: True,
+                polygon_filter=None,
+            )
+            + "\n"
+            + tiling.render(
+                renderer,
+                center_x=bc[0],
+                center_y=bc[1],
+                width=8,
+                height=8,
+                edge_filter=lambda edge, tile: edge[2].startswith("s2"),
+                polygon_filter=lambda polygon, tile: False,
+            )
+        )
+        content += wrap_tikz_picture(rendered + step.extra_tikz_tiling)
+    return content
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--mode",
-        choices=["tile", "tiling", "all"],
+        choices=["tile", "tiling", "tiling_bary", "all"],
         default="all",
         help="which output(s) to generate (default: all)",
     )
@@ -530,6 +576,16 @@ def main():
     if args.mode in ("tiling", "all"):
         path = OUTPUT_DIR / "decoration_tiling.tex"
         path.write_text(wrap_standalone(render_tiling_steps(STEPS)))
+        print(f"Wrote {path}")
+
+    if args.mode in ("tiling_bary", "all"):
+        path = OUTPUT_DIR / "decoration_tiling_bary.tex"
+        alternate_steps = (
+            [replace(STEPS[0], edges=[e for e in STEPS[0].edges if e[2] == "s2"])]
+            + STEPS[:2]
+            + [replace(STEPS[2], edges=[e for e in STEPS[2].edges if e[2] == "s2"])]
+        )
+        path.write_text(wrap_standalone(render_tiling_steps_bary(alternate_steps)))
         print(f"Wrote {path}")
 
 
