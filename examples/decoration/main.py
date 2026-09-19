@@ -6,14 +6,21 @@ The geometry (fundamental_domain, identifications) is copied from
 examples/p31m_tiling/main.py's domain 2; unlike that example, here x is
 fixed rather than animated, and there's no construction-order output.
 
-Each Step in STEPS is a decoration: it shares the same vertices and
-identifications as every other step, but has its own edges and polygons,
-plus optionally its own raw TikZ appended after the rendered pattern,
-inside the same tikzpicture (extra_tikz_tile / extra_tikz_tiling), for
-one-off annotations that don't fit the edges/polygons/identifications
-model (same mechanism as examples/glue_and_split/main.py's
-Step.extra_tikz). decoration_tile.tex / decoration_tiling.tex each render
-every step as its own tikzpicture, in order.
+Two decorations are available, selected with --decoration: "truncation"
+(BASE_STEPS: base, truncation, omnitruncation) and "rectification"
+(BASE_STEPS_ALT: base, rectification). build_steps() expands either
+into a full step list, interleaving a transition_N step between each
+consecutive pair of stages.
+
+Each Step shares the same vertices and identifications as every other
+step, but has its own edges and polygons, plus optionally its own raw
+TikZ appended after the rendered pattern, inside the same tikzpicture
+(extra_tikz_tile / extra_tikz_tiling), for one-off annotations that
+don't fit the edges/polygons/identifications model (same mechanism as
+examples/glue_and_split/main.py's Step.extra_tikz). decoration_tile.tex
+/ decoration_tiling.tex each render every step of the selected
+decoration(s) as its own tikzpicture, in order; output filenames are
+suffixed with the decoration's name.
 """
 
 import argparse
@@ -140,9 +147,7 @@ class Step:
     extra_tikz_tile: str = ""
     extra_tikz_tiling: str = ""
 
-
-BASE_STEPS: list[Step] = [
-    Step(
+BASE_STEP: Step = Step(
         label="base",
         edges=[
             # s0
@@ -170,7 +175,10 @@ BASE_STEPS: list[Step] = [
             ([1, 4, 5, 7], "face2"),
             ([1, 3, 4], "face3"),
         ],
-    ),
+    )
+
+BASE_STEPS: list[Step] = [
+    BASE_STEP,
     Step(
         label="truncation",
         edges=[
@@ -270,23 +278,86 @@ BASE_STEPS: list[Step] = [
     ),
 ]
 
-STEPS: list[Step] = [
-    BASE_STEPS[0],
-    replace(
-        BASE_STEPS[0],
-        label="transition_1",
-        edges=[(v1, v2, "s2old") for v1, v2, l in BASE_STEPS[0].edges if l == "s2"]
-        + BASE_STEPS[1].edges,
+BASE_STEPS_ALT: list[Step] = [
+    BASE_STEP,
+    Step(
+        label="rectification",
+        edges=[
+            # s2
+            (7, 58, "s2"),
+            (7, 59, "s2"),
+            (5, 58, "s2"),
+            (3, 58, "s2"),
+            (58, 60, "s2"),
+            # s0
+            (0, 59, "s0"),
+            (1, 59, "s0"),
+            (1, 60, "s0"),
+            (1, 64, "s0"),
+            (61, 60, "s0"),
+            (61, 62, "s0"),
+            (4, 62, "s0"),
+            (4, 63, "s0"),
+            (6, 63, "s0"),
+            (6, 64, "s0"),
+            # s1
+            (6, 7, "s1"),
+            (6, 58, "s1"),
+            (6, 5, "s1"),
+            (61, 3, "s1"),
+            (61, 58, "s1"),
+            (4, 3, "s1"),
+            (4, 58, "s1"),
+            (4, 5, "s1"),
+            (1, 7, "s1"),
+            (1, 18, "s1"),
+            (0, 7, "s1"),
+        ],
+        polygons=[
+            ([0,59, 7], "face1"),
+            ([58, 5, 7], "face2"),
+            ([4, 3, 58, 5], "face4"),
+            ([3, 58, 60], "face3"),
+            ([59, 2, 58, 7], "face5"),
+        ],
     ),
-    BASE_STEPS[1],
-    replace(
-        BASE_STEPS[1],
-        label="transition_2",
-        edges=[(v1, v2, "s2old") for v1, v2, l in BASE_STEPS[1].edges if l == "s2"]
-        + BASE_STEPS[2].edges,
-    ),
-    BASE_STEPS[2],
 ]
+
+DECORATIONS: dict[str, list[Step]] = {
+    "truncation": BASE_STEPS,
+    "rectification": BASE_STEPS_ALT,
+}
+
+
+def build_steps(base_steps: list[Step]) -> list[Step]:
+    """Expand a decoration's base stages into a full step list, with a
+    transition_N step interleaved between each consecutive pair: it
+    shows the previous stage's s2 edges (as s2old) alongside the next
+    stage's own edges."""
+    steps = [base_steps[0]]
+    for i in range(1, len(base_steps)):
+        prev, curr = base_steps[i - 1], base_steps[i]
+        steps.append(
+            replace(
+                curr,
+                label=f"transition_{i}",
+                edges=[(v1, v2, "s2old") for v1, v2, l in prev.edges if l == "s2"]
+                + curr.edges,
+            )
+        )
+        steps.append(curr)
+    return steps
+
+
+def bary_steps(steps: list[Step]) -> list[Step]:
+    """Reduce a built step list's base and final-decoration steps to
+    only their s2 edges, keeping the transition step in between, for
+    the barycentric tiling export (decoration_tiling_bary)."""
+    return (
+        [replace(steps[0], edges=[e for e in steps[0].edges if e[2] == "s2"])]
+        + steps[1:2]
+        + [replace(steps[2], edges=[e for e in steps[2].edges if e[2] == "s2"])]
+    )
 
 
 def barycenter(points):
@@ -407,7 +478,18 @@ def fundamental_domain(x: float):
     p57 = perpendicular_projection(step3[33 - 22], p4, p5)
     step3 += [p46, p47, p48, p49, p50, p51, p52, p53, p54, p55, p56, p57]
 
-    return step1_and_2 + step3
+    # Alternative second decoration: rectification
+    p58 = between(p1, p4, 0.5)
+    p59 = perpendicular_projection(p7, p0, p3)
+    p60 = perpendicular_projection(p58, p0, p3)
+    p61 = between(p60, p3, 0.5)
+    p62 = between(p3, p58, 0.5)
+    p63 = between(p5, p58, 0.5)
+    p64 = between(p7, p58, 0.5)
+
+    step2_alt = [p58, p59, p60, p61, p62, p63, p64]
+
+    return step1_and_2 + step3 + step2_alt
 
 
 VERTICES = fundamental_domain(X)
@@ -564,29 +646,42 @@ def main():
         default="all",
         help="which output(s) to generate (default: all)",
     )
+    parser.add_argument(
+        "--decoration",
+        choices=["truncation", "rectification", "both"],
+        default="truncation",
+        help="which decoration(s) to render (default: truncation)",
+    )
     args = parser.parse_args()
 
     OUTPUT_DIR.mkdir(exist_ok=True)
 
-    if args.mode in ("tile", "all"):
-        path = OUTPUT_DIR / "decoration_tile.tex"
-        path.write_text(wrap_standalone(render_tile_steps(STEPS)))
-        print(f"Wrote {path}")
+    names = (
+        ["truncation", "rectification"]
+        if args.decoration == "both"
+        else [args.decoration]
+    )
 
-    if args.mode in ("tiling", "all"):
-        path = OUTPUT_DIR / "decoration_tiling.tex"
-        path.write_text(wrap_standalone(render_tiling_steps(STEPS)))
-        print(f"Wrote {path}")
+    for name in names:
+        steps = build_steps(DECORATIONS[name])
+        suffix = f"_{name}"
 
-    if args.mode in ("tiling_bary", "all"):
-        path = OUTPUT_DIR / "decoration_tiling_bary.tex"
-        alternate_steps = (
-            [replace(STEPS[0], edges=[e for e in STEPS[0].edges if e[2] == "s2"])]
-            + STEPS[:2]
-            + [replace(STEPS[2], edges=[e for e in STEPS[2].edges if e[2] == "s2"])]
-        )
-        path.write_text(wrap_standalone(render_tiling_steps_bary(alternate_steps)))
-        print(f"Wrote {path}")
+        if args.mode in ("tile", "all"):
+            path = OUTPUT_DIR / f"decoration_tile{suffix}.tex"
+            path.write_text(wrap_standalone(render_tile_steps(steps)))
+            print(f"Wrote {path}")
+
+        if args.mode in ("tiling", "all"):
+            path = OUTPUT_DIR / f"decoration_tiling{suffix}.tex"
+            path.write_text(wrap_standalone(render_tiling_steps(steps)))
+            print(f"Wrote {path}")
+
+        if args.mode in ("tiling_bary", "all"):
+            path = OUTPUT_DIR / f"decoration_tiling_bary{suffix}.tex"
+            path.write_text(
+                wrap_standalone(render_tiling_steps_bary(bary_steps(steps)))
+            )
+            print(f"Wrote {path}")
 
 
 if __name__ == "__main__":
