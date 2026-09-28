@@ -169,7 +169,7 @@ class PngRenderer:
             self._draw.line(
                 [self._to_pixel(tile.vertices[v1]), self._to_pixel(tile.vertices[v2])],
                 fill=stroke,
-                width=round(stroke_width),
+                width=max(1, round(stroke_width * self._scale)),
             )
 
     def finalize(self) -> Image.Image:

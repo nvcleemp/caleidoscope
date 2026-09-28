@@ -53,6 +53,18 @@ def test_render_tile_edge_draws_nothing_with_empty_style_by_default() -> None:
     assert image.getpixel((45, 40)) == (0, 0, 0, 0)
 
 
+def test_render_tile_scales_stroke_width_by_scale() -> None:
+    # stroke-width is in world units, like coordinates - scale=100 makes a
+    # 0.1-world-unit stroke 10px wide. Sampling the pure midpoint of the
+    # edge (away from either endpoint) avoids any ambiguity from how
+    # Pillow caps a thick line's ends.
+    renderer = PngRenderer({"a": "stroke:#ff0000;stroke-width:0.1"}, scale=100)
+    renderer.initialize()
+    renderer.render_tile(_make_tile([(0, 1, "a")]))
+    image = renderer.finalize()
+    assert image.getpixel((450, 400)) == (255, 0, 0, 255)
+
+
 def test_render_tile_with_edge_filter_renders_only_matching_edges() -> None:
     renderer = PngRenderer(
         {"a": "stroke:#ff0000;stroke-width:1", "b": "stroke:#00ff00;stroke-width:1"},
