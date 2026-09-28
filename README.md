@@ -1,5 +1,7 @@
 # Caleidoscope
 
+[![Tests](https://github.com/nvcleemp/caleidoscope/actions/workflows/tests.yml/badge.svg)](https://github.com/nvcleemp/caleidoscope/actions/workflows/tests.yml)
+
 Creating repeating patterns
 
 ## Overview
