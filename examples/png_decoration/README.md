@@ -14,6 +14,11 @@ exploring the decoration itself.
 
 - `output/png_decoration_tile.png` — the isolated fundamental tile, unfolded.
 - `output/png_decoration_tiling.png` — the resulting periodic tiling.
+- `output/animation/0000.png` … `0040.png` — the periodic tiling with x
+  ranging from 0.1 to 0.9 in steps of 0.02 (only the tiling animates, not
+  the isolated tile). Unlike `examples/decoration/`'s video pipeline, this
+  needs no compile step to produce a viewable frame sequence — PngRenderer
+  writes each frame directly.
 
 The tiling render uses the same two-pass trick as
 `examples/decoration/main.py`'s `render_tiling_steps` and

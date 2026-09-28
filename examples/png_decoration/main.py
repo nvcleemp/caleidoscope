@@ -8,6 +8,12 @@ examples/svg_decoration/main.py (in turn ported from
 examples/decoration/main.py's BASE_STEPS_ALT) - this exists purely to
 demonstrate PngRenderer on the same real (non-toy) tiling, using the third
 renderer instead of the second.
+
+Also writes a sequence of tiling frames to output/animation/, with x
+ranging from 0.1 to 0.9 in steps of 0.02 - a raster-specific extra this
+example takes advantage of, since PngRenderer needs no compile step
+(unlike TikZ's video pipeline in examples/decoration/) to produce a
+viewable frame sequence.
 """
 
 import math
@@ -267,8 +273,8 @@ def render_tile() -> Image.Image:
     return renderer.finalize()
 
 
-def render_tiling() -> Image.Image:
-    """Render the full periodic tiling.
+def render_tiling_for_x(x: float) -> Image.Image:
+    """Render the full periodic tiling at the given shape parameter x.
 
     Two passes, not one: this draws every tile's polygon before any tile's
     s2 edge, so s2 edges stay on top even where they sit on a shared
@@ -283,7 +289,7 @@ def render_tiling() -> Image.Image:
     images (each PngRenderer.initialize() call creates its own canvas), so
     they're layered with PIL.Image.alpha_composite instead.
     """
-    vertices = [(TILING_SCALE * vx, TILING_SCALE * vy) for vx, vy in VERTICES]
+    vertices = [(TILING_SCALE * vx, TILING_SCALE * vy) for vx, vy in fundamental_domain(x)]
     bc = barycenter(vertices)
     pattern = caleidoscope.Pattern(
         vertices=vertices,
@@ -308,6 +314,25 @@ def render_tiling() -> Image.Image:
     return Image.alpha_composite(fills_image, edges_image)
 
 
+def render_tiling() -> Image.Image:
+    """Render the full periodic tiling at the fixed shape parameter X."""
+    return render_tiling_for_x(X)
+
+
+def render_animation_frames() -> None:
+    """Write a sequence of tiling frames with x ranging from 0.1 to 0.9 in
+    steps of 0.02, to output/animation/, zero-padded sequence numbers."""
+    animation_dir = OUTPUT_DIR / "animation"
+    animation_dir.mkdir(parents=True, exist_ok=True)
+
+    frame_count = round((0.9 - 0.1) / 0.02) + 1
+    for i in range(frame_count):
+        x = round(0.1 + i * 0.02, 2)
+        frame_path = animation_dir / f"{i:04d}.png"
+        render_tiling_for_x(x).save(frame_path)
+        print(f"Wrote {frame_path} (x={x})")
+
+
 def main():
     OUTPUT_DIR.mkdir(exist_ok=True)
 
@@ -318,6 +343,8 @@ def main():
     tiling_path = OUTPUT_DIR / "png_decoration_tiling.png"
     render_tiling().save(tiling_path)
     print(f"Wrote {tiling_path}")
+
+    render_animation_frames()
 
 
 if __name__ == "__main__":
