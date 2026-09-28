@@ -9,6 +9,11 @@ patterns and tilings. You describe a fundamental tile (its vertices, edges,
 and optionally polygons) together with edge identifications, and Caleidoscope
 derives the transformations needed to tile a region with copies of it.
 
+![A decorated p31m tiling rendered with PngRenderer](docs/images/p31m_tiling.png)
+
+*A decorated p31m tiling, rendered by
+[`examples/png_decoration/`](examples/png_decoration/).*
+
 ## Requirements
 
 - Python >= 3.13
