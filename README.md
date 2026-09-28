@@ -56,9 +56,12 @@ with different edge filters or styles), call `pattern.construct(...)` once to
 get a `ConstructedPattern`, then call `.render(...)` on it as many times as
 needed without redoing the tiling computation.
 
-`TikzRenderer` is the only renderer currently provided; other output formats
-can be added by implementing the `Renderer` protocol (see
-`caleidoscope.renderers.base`).
+`TikzRenderer` and `SvgRenderer` are the renderers currently provided; other
+output formats can be added by implementing the `Renderer` protocol (see
+`caleidoscope.renderers.base`). Unlike `TikzRenderer`, `SvgRenderer.finalize()`
+returns an `xml.etree.ElementTree.Element` (the `<svg>` root) rather than a
+string, so the two aren't drop-in interchangeable in code that assumes a
+string result.
 
 ## Running the examples
 

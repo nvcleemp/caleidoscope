@@ -1,0 +1,12 @@
+[project]
+name = "svg-decoration"
+version = "0.1.0"
+description = "SVG rendering of the p31m domain-2 quadrangle's finished rectification decoration"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "caleidoscope",
+]
+
+[tool.uv.sources]
+caleidoscope = { workspace = true }
