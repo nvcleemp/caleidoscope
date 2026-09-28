@@ -13,3 +13,6 @@ dependencies = []
 
 [tool.uv.workspace]
 members = ["libs/*", "examples/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["libs/caleidoscope/tests"]
