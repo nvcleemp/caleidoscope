@@ -8,7 +8,7 @@ This is a `uv` workspace (`pyproject.toml` at the root, `[tool.uv.workspace] mem
 
 - `libs/caleidoscope/` — the actual package (`caleidoscope`), source under `src/caleidoscope/`.
 - `examples/basic/` — small, single-feature demo scripts.
-- `examples/two_tilings/`, `examples/p31m_tiling/` — larger, self-contained examples, each its own workspace member with its own `pyproject.toml`.
+- Every other directory under `examples/` (e.g. `two_tilings/`, `p31m_tiling/`, `decoration/`) — a larger, self-contained example, each its own workspace member with its own `pyproject.toml` and `README.md`.
 
 The root project itself (`caleidoscope-group`) has no dependencies; it only exists to define the workspace. Anything that needs to `import caleidoscope` must live in a workspace member that declares `caleidoscope` as a dependency (see the `examples/*/pyproject.toml` files for the pattern: `dependencies = ["caleidoscope"]` plus `[tool.uv.sources] caleidoscope = { workspace = true }`).
 
