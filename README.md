@@ -106,3 +106,7 @@ line coverage.
 
 See [`AGENTS.md`](AGENTS.md) for more on the workspace layout and running
 things across workspace members.
+
+## License
+
+Caleidoscope is released under the [MIT License](LICENSE).
