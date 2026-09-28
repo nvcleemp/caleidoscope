@@ -7,5 +7,6 @@ into various output formats.
 from .base import Renderer
 from .tikz import TikzRenderer
 from .svg import SvgRenderer
+from .png import PngRenderer
 
-__all__ = ["Renderer", "TikzRenderer", "SvgRenderer"]
+__all__ = ["Renderer", "TikzRenderer", "SvgRenderer", "PngRenderer"]

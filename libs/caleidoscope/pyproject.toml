@@ -7,7 +7,9 @@ authors = [
     { name = "nvcleemp" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "pillow>=11.0.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.11.14,<0.12.0"]
