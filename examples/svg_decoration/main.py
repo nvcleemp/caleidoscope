@@ -107,7 +107,7 @@ EDGES: list[tuple[int, int, str]] = [
     (4, 58, "s1"),
     (4, 5, "s1"),
     (1, 7, "s1"),
-    (1, 18, "s1"),
+    (1, 58, "s1"),
     (0, 7, "s1"),
 ]
 
@@ -249,7 +249,8 @@ VERTICES = fundamental_domain(X)
 def write_svg(element: ET.Element, path: Path) -> None:
     """Serialize an SVG element tree and write it to disk."""
     path.write_text(
-        '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(element, encoding="unicode")
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        + ET.tostring(element, encoding="unicode")
     )
 
 
