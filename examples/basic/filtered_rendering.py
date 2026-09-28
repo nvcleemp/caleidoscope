@@ -83,7 +83,11 @@ def main():
     output_all = constructed.render(TikzRenderer())
     (OUTPUT_DIR / "all_edges.tex").write_text(wrap_tikz_picture(output_all, "All Edges"))
     print(f"   Saved to output/all_edges.tex ({output_all.count('draw')} edges)\n")
-    write_svg(constructed.render(SvgRenderer()), OUTPUT_DIR / "all_edges.svg")
+    svg_renderer_all = SvgRenderer({
+        "horizontal": "stroke:black;stroke-width:0.1",
+        "vertical": "stroke:black;stroke-width:0.1",
+    })
+    write_svg(constructed.render(svg_renderer_all), OUTPUT_DIR / "all_edges.svg")
     print("   Saved to output/all_edges.svg\n")
 
     # 2. Render only horizontal edges with red color
@@ -93,7 +97,7 @@ def main():
     output_horizontal = constructed.render(renderer_horizontal, edge_filter=filter_horizontal)
     (OUTPUT_DIR / "horizontal.tex").write_text(wrap_tikz_picture(output_horizontal, "Horizontal Edges"))
     print(f"   Saved to output/horizontal.tex ({output_horizontal.count('draw')} edges)\n")
-    svg_renderer_horizontal = SvgRenderer({"horizontal": "stroke:red;stroke-width:2"})
+    svg_renderer_horizontal = SvgRenderer({"horizontal": "stroke:red;stroke-width:0.1"})
     write_svg(
         constructed.render(svg_renderer_horizontal, edge_filter=filter_horizontal),
         OUTPUT_DIR / "horizontal.svg",
@@ -107,7 +111,7 @@ def main():
     output_vertical = constructed.render(renderer_vertical, edge_filter=filter_vertical)
     (OUTPUT_DIR / "vertical.tex").write_text(wrap_tikz_picture(output_vertical, "Vertical Edges"))
     print(f"   Saved to output/vertical.tex ({output_vertical.count('draw')} edges)\n")
-    svg_renderer_vertical = SvgRenderer({"vertical": "stroke:blue;stroke-width:2"})
+    svg_renderer_vertical = SvgRenderer({"vertical": "stroke:blue;stroke-width:0.1"})
     write_svg(
         constructed.render(svg_renderer_vertical, edge_filter=filter_vertical),
         OUTPUT_DIR / "vertical.svg",
@@ -124,8 +128,8 @@ def main():
     (OUTPUT_DIR / "colored.tex").write_text(wrap_tikz_picture(output_colored, "Colored Edges"))
     print(f"   Saved to output/colored.tex ({output_colored.count('draw')} edges)\n")
     svg_renderer_colored = SvgRenderer({
-        "horizontal": "stroke:red;stroke-width:2",
-        "vertical": "stroke:blue;stroke-width:2",
+        "horizontal": "stroke:red;stroke-width:0.1",
+        "vertical": "stroke:blue;stroke-width:0.1",
     })
     write_svg(constructed.render(svg_renderer_colored), OUTPUT_DIR / "colored.svg")
     print("   Saved to output/colored.svg\n")

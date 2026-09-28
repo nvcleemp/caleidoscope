@@ -26,9 +26,9 @@ TILE_SCALE = 10
 TILING_SCALE = 2
 
 ANNOTATION_STYLES = {
-    "s0": "stroke:teal;stroke-width:0.5",
-    "s1": "stroke:red;stroke-width:0.5",
-    "s2": "stroke:black;stroke-width:2",
+    "s0": "stroke:teal;stroke-width:0.05",
+    "s1": "stroke:red;stroke-width:0.05",
+    "s2": "stroke:black;stroke-width:0.1",
     "face1": "fill:#0000ff;fill-opacity:0.2;stroke:none",
     "face2": "fill:#a000a0;fill-opacity:0.2;stroke:none",
     "face3": "fill:#ffa500;fill-opacity:0.2;stroke:none",
