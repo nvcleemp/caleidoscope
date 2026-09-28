@@ -1,6 +1,6 @@
 .PHONY: run-basic-classify run-basic-filtered-rendering run-basic-from-two-segments \
 	run-basic-quadtree run-basic-transformation-tracking run-decoration \
-	run-glue-and-split run-p31m-tiling run-two-tilings
+	run-glue-and-split run-p31m-tiling run-two-tilings run-svg-decoration
 
 run-basic-classify:
 	uv run --package basic-examples python examples/basic/classify.py
@@ -28,3 +28,6 @@ run-p31m-tiling:
 
 run-two-tilings:
 	uv run --package two-tilings python examples/two_tilings/main.py
+
+run-svg-decoration:
+	uv run --package svg-decoration python examples/svg_decoration/main.py
