@@ -20,6 +20,10 @@ derives the transformations needed to tile a region with copies of it.
 
 - Python >= 3.13
 - [uv](https://docs.astral.sh/uv/) for environment and dependency management
+- Optional, only for turning TikZ output into videos (see
+  [below](#turning-tikz-output-into-videos)): `latexmk` with a TeX
+  distribution that includes TikZ, `pdftoppm` (from poppler-utils), and
+  `ffmpeg`
 
 ## Installation
 
@@ -91,6 +95,28 @@ New scripts need a target added manually.
 
 `examples/basic/` contains small, single-feature demo scripts — see
 [`examples/basic/README.md`](examples/basic/README.md) for what's there.
+
+## Turning TikZ output into videos
+
+Several examples write a `.tex` file with one standalone TikZ picture per
+page, each page being one animation frame.
+[`scripts/tex-to-video.sh`](scripts/tex-to-video.sh) turns such a file into
+an `.mp4`: it compiles it to PDF with `latexmk`, rasterizes each page with
+`pdftoppm`, and encodes the frames with `ffmpeg`. The video plays the frames
+forward and then backward, so it loops smoothly in players that don't
+support ping-pong playback.
+
+```bash
+scripts/tex-to-video.sh <input.tex> [output.mp4] [--fps N] [--dpi N]
+```
+
+The output defaults to `<input>.mp4` next to the `.tex` file; `--fps`
+defaults to 12 and `--dpi` to 300.
+
+The examples that produce such files (`decoration`, `glue_and_split`,
+`p31m_tiling`, `two_tilings`) each have a `Makefile` that wraps the script:
+run `make videos` in the example's directory after generating its output.
+See that example's README for details.
 
 ## Development
 
