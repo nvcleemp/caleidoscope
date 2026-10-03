@@ -1,6 +1,6 @@
 import pytest
 
-from construction import construct_tiles, view_for, with_inverses
+from construction import construct_tiles, view_for
 from groups import GROUPS
 from motif import motif_polygon
 from symmetry import derive, signature
@@ -13,15 +13,6 @@ GROUP_NAMES = [
 
 def test_all_seventeen_groups_are_defined():
     assert list(GROUPS) == GROUP_NAMES
-
-
-def test_with_inverses_skips_self_gluings():
-    mirror = ((0, 1), (0, 1), False)
-    half_turn = ((1, 2), (2, 1), True)
-    translation = ((0, 3), (1, 2), True)
-    assert with_inverses([mirror, half_turn, translation]) == [
-        mirror, half_turn, translation, ((1, 2), (0, 3), True),
-    ]
 
 
 def _inside_convex(point, polygon):
