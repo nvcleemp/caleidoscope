@@ -1,7 +1,7 @@
 import math
 
 import caleidoscope
-from symmetry import Line, View, derive
+from symmetry import Line, RotationCentre, SymmetryElements, View, derive, to_tiles
 
 
 def test_line_through_is_canonical_for_either_direction():
@@ -36,3 +36,16 @@ def test_derive_classifies_elements():
     assert math.dist(elements.rotations[0].point, (1, 0)) < 1e-9
     assert len(elements.mirrors) == 1 and elements.mirrors[0].is_close(Line(0.0, 0.0))
     assert len(elements.glides) == 1 and elements.glides[0].is_close(Line(0.0, 0.5))
+
+
+def test_to_tiles_draws_lines_then_markers():
+    elements = SymmetryElements(
+        rotations=[RotationCentre((0, 0), 4), RotationCentre((1, 1), 2)],
+        mirrors=[Line.through((0, 0), (1, 0))],
+        glides=[Line.through((0, 0.5), (1, 0))],
+    )
+    lines_tile, markers_tile = to_tiles(elements, View(0, 0, 4, 4), 0.1)
+    assert [edge[2] for edge in lines_tile.edges] == ["glide", "mirror"]
+    assert [polygon[1] for polygon in markers_tile.polygons] == ["rot4", "rot2"]
+    square = markers_tile.polygons[0][0]
+    assert all(math.isclose(math.dist(markers_tile.vertices[i], (0, 0)), 0.1) for i in square)

@@ -153,3 +153,63 @@ def signature(elements: SymmetryElements) -> Signature:
         if not any(abs(m.angle - d) < TOLERANCE for d in directions):
             directions.append(m.angle)
     return frozenset(on_mirror), frozenset(off_mirror), len(directions), bool(elements.glides)
+
+
+def _marker(centre: RotationCentre, angle: float, size: float) -> list[Point]:
+    """Outline of a rotation-centre marker, with a symmetry axis along `angle`."""
+    x, y = centre.point
+    if centre.order == 2:
+        # Lens: two circular arcs between (-size, 0) and (size, 0), bulging
+        # by half the size.
+        bulge = size / 2
+        k = (size * size - bulge * bulge) / (2 * bulge)
+        radius = k + bulge
+        half = math.atan2(size, k)
+        arc = [(radius * math.sin(t), radius * math.cos(t) - k)
+               for t in (half - 2 * half * i / 8 for i in range(9))]
+        local = arc + [(-px, -py) for px, py in arc[1:-1]]
+    else:
+        # Regular polygon with a vertex on the axis, except squares, which
+        # get an edge parallel to it.
+        offset = math.pi / 4 if centre.order == 4 else 0.0
+        local = [
+            (size * math.cos(offset + 2 * math.pi * i / centre.order),
+             size * math.sin(offset + 2 * math.pi * i / centre.order))
+            for i in range(centre.order)
+        ]
+    c, s = math.cos(angle), math.sin(angle)
+    return [(x + c * px - s * py, y + s * px + c * py) for px, py in local]
+
+
+def to_tiles(elements: SymmetryElements, view: View, marker_size: float) -> list[caleidoscope.Tile]:
+    """Two tiles in world coordinates: the clipped mirror/glide lines, then
+    the rotation-centre markers (so markers are drawn on top of lines).
+
+    A marker is aligned with a mirror through its centre, if there is one.
+    """
+    line_vertices: list[Point] = []
+    line_edges: list[tuple[int, int, str]] = []
+    for annotation, lines in (("glide", elements.glides), ("mirror", elements.mirrors)):
+        for line in lines:
+            segment = line.clip(view)
+            if segment is None:
+                continue
+            line_vertices.extend(segment)
+            line_edges.append((len(line_vertices) - 2, len(line_vertices) - 1, annotation))
+
+    marker_vertices: list[Point] = []
+    marker_polygons: list[tuple[list[int], str]] = []
+    for centre in elements.rotations:
+        angle = next(
+            (m.angle for m in elements.mirrors if m.distance_to(centre.point) < TOLERANCE), 0.0
+        )
+        outline = _marker(centre, angle, marker_size)
+        start = len(marker_vertices)
+        marker_vertices.extend(outline)
+        marker_polygons.append((list(range(start, start + len(outline))), f"rot{centre.order}"))
+
+    identity = caleidoscope.Transform2D()
+    return [
+        caleidoscope.Tile(line_vertices, line_edges, [], identity, ()),
+        caleidoscope.Tile(marker_vertices, [], marker_polygons, identity, ()),
+    ]
