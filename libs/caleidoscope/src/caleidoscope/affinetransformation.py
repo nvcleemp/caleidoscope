@@ -143,6 +143,45 @@ class Transform2D:
 
         return Transform2D(result)
 
+    def inverse(self) -> "Transform2D":
+        """
+        Return the inverse transformation.
+
+        Returns:
+            A new Transform2D that undoes this one.
+
+        Raises:
+            ValueError: If the transformation is not invertible.
+        """
+        (a, b, tx), (c, d, ty) = self.matrix[0], self.matrix[1]
+        det = a * d - b * c
+        if abs(det) < 1e-12:
+            raise ValueError("Transformation is not invertible")
+        ia, ib = d / det, -b / det
+        ic, id_ = -c / det, a / det
+        return Transform2D([
+            [ia, ib, -(ia * tx + ib * ty)],
+            [ic, id_, -(ic * tx + id_ * ty)],
+            [0.0, 0.0, 1.0],
+        ])
+
+    def is_close(self, other: "Transform2D", tolerance: float = 1e-9) -> bool:
+        """
+        Check whether two transformations are equal up to a tolerance.
+
+        Args:
+            other: Another Transform2D instance.
+            tolerance: Maximum allowed difference per affine matrix entry.
+
+        Returns:
+            True if all six affine entries differ by at most `tolerance`.
+        """
+        return all(
+            abs(self.matrix[i][j] - other.matrix[i][j]) <= tolerance
+            for i in range(2)
+            for j in range(3)
+        )
+
     @staticmethod
     def translate(dx: float, dy: float) -> "Transform2D":
         """
