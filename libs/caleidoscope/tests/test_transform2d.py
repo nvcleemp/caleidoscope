@@ -183,3 +183,30 @@ def test_repr_shows_matrix_rows() -> None:
     assert text.startswith("Transform2D([")
     assert "1.000000" in text and "2.000000" in text
     assert text.count("[") == 4  # outer + three rows
+
+
+@pytest.mark.parametrize(
+    "transform",
+    [
+        Transform2D.rotate(1.0, 2.0, 3.0),
+        Transform2D.translate(1.0, -2.0),
+        # (x, y) -> (x + 1, 1 - y): a glide reflection.
+        Transform2D.translate(1.0, 1.0).compose(Transform2D.reflect_x()),
+    ],
+)
+def test_inverse_composes_to_identity(transform: Transform2D) -> None:
+    assert transform.compose(transform.inverse()).is_close(Transform2D())
+    assert transform.inverse().compose(transform).is_close(Transform2D())
+
+
+def test_inverse_of_singular_matrix_raises() -> None:
+    singular = Transform2D([[1.0, 2.0, 0.0], [2.0, 4.0, 0.0], [0.0, 0.0, 1.0]])
+    with pytest.raises(ValueError):
+        singular.inverse()
+
+
+def test_is_close_within_tolerance() -> None:
+    a = Transform2D.translate(1.0, 2.0)
+    assert a.is_close(Transform2D.translate(1.0 + 1e-12, 2.0))
+    assert not a.is_close(Transform2D.translate(1.0 + 1e-6, 2.0))
+    assert a.is_close(Transform2D.translate(1.0 + 1e-6, 2.0), tolerance=1e-5)

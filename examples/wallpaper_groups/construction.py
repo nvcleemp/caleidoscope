@@ -4,7 +4,7 @@ derive the symmetry elements of) one view.
 """
 
 import caleidoscope
-from groups import Identification, WallpaperGroup
+from groups import WallpaperGroup
 from motif import centroid, fundamental_tile
 from symmetry import View
 
@@ -12,21 +12,6 @@ VIEW_SIZE = 8.0
 # The symmetry derivation needs group elements whose tiles land up to about
 # twice as far away as the symmetry elements they describe.
 CONSTRUCTION_FACTOR = 2.5
-
-
-def with_inverses(identifications: list[Identification]) -> list[Identification]:
-    """`identifications` plus their inverses.
-
-    `Pattern.construct` only composes the generators it is given, so a
-    translation without its inverse tiles just one quadrant. Self-gluings
-    (mirrors, half-turns) are their own inverse and are not repeated.
-    """
-    inverses = [
-        (to, frm, keep_orientation)
-        for frm, to, keep_orientation in identifications
-        if to not in (frm, frm[::-1])
-    ]
-    return identifications + inverses
 
 
 def view_for(group: WallpaperGroup) -> View:
@@ -64,7 +49,7 @@ def construct_tiles(group: WallpaperGroup) -> list[caleidoscope.Tile]:
         polygons,
         center=centroid(group.vertices),
         tolerance=0.01,
-        identifications=with_inverses(group.identifications),
+        identifications=group.identifications,
     )
     constructed = pattern.construct(
         center_x=view.center_x,

@@ -35,7 +35,9 @@ class Pattern:
                  polygons: list[tuple[list[int], str]],
                  center: tuple[float, float],
                  tolerance: float,
-                 identifications: list[tuple[tuple[int, int], tuple[int, int], bool]]
+                 identifications: list[tuple[tuple[int, int], tuple[int, int], bool]],
+                 *,
+                 include_inverses: bool = True
                 ):
         """
         Initialize a Pattern.
@@ -50,6 +52,13 @@ class Pattern:
             tolerance: Maximum distance for considering tile centers as duplicates.
             identifications: List of tuples ((from_v1, from_v2), (to_v1, to_v2), keep_orientation)
                            defining edge identifications for generating transformations.
+            include_inverses: If True (the default), the inverse of every generator
+                           is also used as a generator (appended after the original
+                           ones, skipping inverses that equal an existing generator),
+                           so e.g. a translation tiles in both directions. If False,
+                           only the generators derived from the identifications are
+                           used, which reproduces the construction order of earlier
+                           versions.
         """
         self.vertices = vertices
         self.edges = edges
@@ -57,6 +66,7 @@ class Pattern:
         self.center = center
         self.tolerance = tolerance
         self.identifications = identifications
+        self.include_inverses = include_inverses
         self._generators = None
 
     @property
@@ -64,14 +74,16 @@ class Pattern:
         """
         Get the transformation generators (lazy evaluation).
 
-        Generators are computed from the identifications on first access
-        and cached for subsequent calls.
+        Generators are computed from the identifications on first access and
+        cached for subsequent calls. With `include_inverses`, their inverses
+        follow them in the same order, skipping any inverse that equals an
+        earlier generator.
 
         Returns:
             List of Transform2D objects representing the generators.
         """
         if self._generators is None:
-            self._generators = [
+            generators = [
                 Transform2D.from_two_segments(
                     self.vertices[f[0]],
                     self.vertices[f[1]],
@@ -81,6 +93,12 @@ class Pattern:
                 )
                 for f, t, o in self.identifications
             ]
+            if self.include_inverses:
+                for generator in list(generators):
+                    inverse = generator.inverse()
+                    if not any(inverse.is_close(other) for other in generators):
+                        generators.append(inverse)
+            self._generators = generators
         return self._generators
 
     def construct(

@@ -379,6 +379,10 @@ def render_tiling_construction_frames(domain: Domain) -> str:
         center=bc,
         tolerance=0.1,
         identifications=domain.identifications,
+        # The tile numbering below follows construction order, which is
+        # referred to in texts outside this repository: keep the original
+        # generators only, so that order stays unchanged.
+        include_inverses=False,
     )
     constructed = tiling.construct(center_x=bc[0], center_y=bc[1], width=12, height=12)
     tiles = constructed.get_tiles()[:MAX_CONSTRUCTION_FRAMES]
@@ -453,6 +457,10 @@ def render_tiling_construction_beamer_frames(domain: Domain) -> str:
         center=bc,
         tolerance=0.1,
         identifications=domain.identifications,
+        # The tile numbering below follows construction order, which is
+        # referred to in texts outside this repository: keep the original
+        # generators only, so that order stays unchanged.
+        include_inverses=False,
     )
     constructed = tiling.construct(center_x=bc[0], center_y=bc[1], width=12, height=12)
     tiles = constructed.get_tiles()[:MAX_CONSTRUCTION_FRAMES]

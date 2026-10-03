@@ -61,6 +61,13 @@ pattern = Pattern(
 tikz_code = pattern.render(TikzRenderer(), width=6, height=6)
 ```
 
+The inverse of every generator is used as well, so the square above tiles in
+all directions even though each identification only lists one direction.
+Pass `include_inverses=False` to `Pattern` to use only the generators derived
+from the identifications, as earlier versions did; this keeps the
+construction order (and so the numbering of tiles in
+`ConstructedPattern.get_tiles()`) the same as before.
+
 `render()` is a convenience method that constructs the pattern and renders it
 in one step. If you need to render the same pattern multiple times (e.g.
 with different edge filters or styles), call `pattern.construct(...)` once to
