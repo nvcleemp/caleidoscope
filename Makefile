@@ -1,7 +1,7 @@
 .PHONY: run-basic-classify run-basic-filtered-rendering run-basic-from-two-segments \
 	run-basic-quadtree run-basic-transformation-tracking run-decoration \
 	run-glue-and-split run-p31m-tiling run-two-tilings run-svg-decoration \
-	run-png-decoration
+	run-png-decoration run-wallpaper-groups
 
 run-basic-classify:
 	uv run --package basic-examples python examples/basic/classify.py
@@ -35,3 +35,6 @@ run-svg-decoration:
 
 run-png-decoration:
 	uv run --package png-decoration python examples/png_decoration/main.py
+
+run-wallpaper-groups:
+	uv run --package wallpaper-groups python examples/wallpaper_groups/main.py
