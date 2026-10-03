@@ -718,7 +718,8 @@ def main():
             coloured_renderer: caleidoscope.TikzRenderer,
         ) -> str:
             cp = tiling.construct(width=16, height=16)
-            gs = tiling.generators
+            # Only the generators from the identifications; Pattern appends their inverses after them.
+            gs = tiling.generators[: len(tiling.identifications)]
             rots, axes = generate_pgg_symmetries_simple(
                 [g.classify() for g in gs], (-8, -8, 8, 8)
             )
@@ -865,7 +866,7 @@ def main():
         )
 
         rots, axes = generate_pgg_symmetries_simple(
-            [g.classify() for g in pattern.generators], (-8, -8, 8, 8)
+            [g.classify() for g in pattern.generators[: len(pattern.identifications)]], (-8, -8, 8, 8)
         )
         write_standalone_tex(
             OUTPUT_DIR / f"{filename.removesuffix('.tex')}_symm.tex",

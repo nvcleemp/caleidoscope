@@ -2,6 +2,8 @@
 test_constructed_pattern.py and test_transformation_tracking.py:
 generator caching, boundary handling, and the no-generators edge case."""
 
+import pytest
+
 from caleidoscope import Pattern, Transform2D
 
 
@@ -124,3 +126,10 @@ def test_self_inverse_generators_are_not_duplicated() -> None:
 def test_reverse_identification_given_by_caller_is_not_duplicated() -> None:
     both_directions = [((0, 3), (1, 2), True), ((1, 2), (0, 3), True)]
     assert len(_square_pattern(both_directions).generators) == 2
+
+
+def test_include_inverses_is_keyword_only() -> None:
+    vertices = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    edges = [(0, 1, ""), (1, 2, ""), (2, 3, ""), (3, 0, "")]
+    with pytest.raises(TypeError):
+        Pattern(vertices, edges, [], (0.5, 0.5), 0.1, [], False)  # type: ignore[misc]
