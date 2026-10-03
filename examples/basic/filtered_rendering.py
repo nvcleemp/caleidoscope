@@ -39,8 +39,8 @@ def create_checkerboard_pattern() -> Pattern:
 
     # Edge identifications for tiling
     identifications = [
-        ((3, 0), (1, 2), True),   # left to right
-        ((0, 1), (2, 3), True),   # bottom to top
+        ((0, 3), (1, 2), True),   # left to right
+        ((0, 1), (3, 2), True),   # bottom to top
     ]
 
     return Pattern(vertices, edges, [], center, tolerance, identifications)
