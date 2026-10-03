@@ -1,0 +1,21 @@
+[project]
+name = "wallpaper-groups"
+version = "0.1.0"
+description = "Annotated PNG for each of the 17 wallpaper groups"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "caleidoscope",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.uv.sources]
+caleidoscope = { workspace = true }
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -13,6 +13,7 @@ members = [
     "png-decoration",
     "svg-decoration",
     "two-tilings",
+    "wallpaper-groups",
 ]
 
 [[package]]
@@ -340,3 +341,22 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "caleidoscope", editable = "libs/caleidoscope" }]
+
+[[package]]
+name = "wallpaper-groups"
+version = "0.1.0"
+source = { virtual = "examples/wallpaper_groups" }
+dependencies = [
+    { name = "caleidoscope" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "caleidoscope", editable = "libs/caleidoscope" }]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.1.1" }]
