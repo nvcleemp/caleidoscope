@@ -119,7 +119,7 @@ def derive(transformations: list[caleidoscope.Transform2D], view: View) -> Symme
                 order = round(2 * math.pi / abs(parameters["angle_rad"]))
                 for i, (other, other_order) in enumerate(rotations):
                     if math.dist(pivot, other) < TOLERANCE:
-                        rotations[i] = (other, max(order, other_order))
+                        rotations[i] = (other, math.lcm(order, other_order))
                         break
                 else:
                     rotations.append((pivot, order))

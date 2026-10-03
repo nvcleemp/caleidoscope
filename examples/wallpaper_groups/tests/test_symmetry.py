@@ -49,3 +49,10 @@ def test_to_tiles_draws_lines_then_markers():
     assert [polygon[1] for polygon in markers_tile.polygons] == ["rot4", "rot2"]
     square = markers_tile.polygons[0][0]
     assert all(math.isclose(math.dist(markers_tile.vertices[i], (0, 0)), 0.1) for i in square)
+
+
+def test_derive_combines_rotation_orders_at_one_centre():
+    third_turn = caleidoscope.Transform2D.rotate(2 * math.pi / 3, 0, 0)
+    half_turn = caleidoscope.Transform2D.rotate(math.pi, 0, 0)
+    elements = derive([third_turn, half_turn], View(0, 0, 4, 4))
+    assert [centre.order for centre in elements.rotations] == [6]

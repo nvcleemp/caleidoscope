@@ -7,7 +7,7 @@ p3, p3m1, p31m, p6, p6m). Each image shows:
 - an F-shaped motif in every fundamental domain: blue for copies related
   to the original by a rotation or translation, red for mirror images;
 - the original fundamental domain, highlighted in yellow;
-- the group's symmetry elements, in the style of the International Tables:
+- the group's symmetry elements, loosely after the International Tables:
   mirrors as thick black lines, glide axes as thin grey lines, and
   rotation centres as a lens, triangle, square or hexagon for 2-, 3-, 4-
   and 6-fold rotations.
