@@ -3,6 +3,7 @@ import pytest
 from construction import construct_tiles, view_for, with_inverses
 from groups import GROUPS
 from motif import motif_polygon
+from symmetry import derive, signature
 
 GROUP_NAMES = [
     "p1", "p2", "pm", "pg", "cm", "pmm", "pmg", "pgg", "cmm",
@@ -73,3 +74,43 @@ def test_mirror_copies_are_marked(name):
     # Exactly the groups with an orientation-reversing element have mirror copies.
     has_reflections = name not in {"p1", "p2", "p4", "p3", "p6"}
     assert ("motif_mirrored" in annotations) == has_reflections
+
+
+# (orders of rotation centres on a mirror, orders off every mirror,
+#  number of mirror directions, has glide axes)
+EXPECTED_SIGNATURES = {
+    "p1": (set(), set(), 0, False),
+    "p2": (set(), {2}, 0, False),
+    "pm": (set(), set(), 1, False),
+    "pg": (set(), set(), 0, True),
+    "cm": (set(), set(), 1, True),
+    "pmm": ({2}, set(), 2, False),
+    "pmg": (set(), {2}, 1, True),
+    "pgg": (set(), {2}, 0, True),
+    "cmm": ({2}, {2}, 2, True),
+    "p4": (set(), {2, 4}, 0, False),
+    "p4m": ({2, 4}, set(), 4, True),
+    "p4g": ({2}, {4}, 2, True),
+    "p3": (set(), {3}, 0, False),
+    "p3m1": ({3}, set(), 3, True),
+    "p31m": ({3}, {3}, 3, True),
+    "p6": (set(), {2, 3, 6}, 0, False),
+    "p6m": ({2, 3, 6}, set(), 6, True),
+}
+
+
+def test_expected_signatures_are_distinct():
+    signatures = {
+        (frozenset(on), frozenset(off), dirs, glide)
+        for on, off, dirs, glide in EXPECTED_SIGNATURES.values()
+    }
+    assert len(signatures) == 17
+
+
+@pytest.mark.parametrize("name", GROUP_NAMES)
+def test_group_signature(name):
+    group = GROUPS[name]
+    tiles = construct_tiles(group)
+    elements = derive([tile.transformation for tile in tiles], view_for(group))
+    on, off, dirs, glide = EXPECTED_SIGNATURES[name]
+    assert signature(elements) == (frozenset(on), frozenset(off), dirs, glide)
