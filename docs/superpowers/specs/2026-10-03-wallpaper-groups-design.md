@@ -35,11 +35,13 @@ Out of scope (possible later additions):
 
 ```
 examples/wallpaper_groups/
-  pyproject.toml      # member "wallpaper-groups"; depends on caleidoscope; dev group: pytest
+  pyproject.toml      # member "wallpaper-groups"; depends on caleidoscope; dev group: pytest;
+                      # pytest config (pythonpath = ".", testpaths = "tests")
   README.md
   groups.py           # the 17 group definitions
   motif.py            # F motif + shared tile assembly (motif, domain outline, domain fill)
   symmetry.py         # derive symmetry elements from tile transformations
+  construction.py     # view, inverse generators, tile construction, mirror-copy marking
   main.py             # CLI + PNG rendering
   tests/
     test_groups.py    # signature test per group
@@ -49,11 +51,15 @@ examples/wallpaper_groups/
 ## Group definitions (`groups.py`)
 
 Each group is a dataclass `WallpaperGroup` with: `name`, domain `vertices`
-(in order around the boundary), `identifications` (in `Pattern`'s
-`((from_v1, from_v2), (to_v1, to_v2), keep_orientation)` format), and the
-motif placement (`anchor`, `scale`, `rotation`). The shared code in
-`motif.py` adds the boundary edges (`domain_edge`), the domain polygon
-(`domain`) and the motif polygon (`motif`) so no group repeats them.
+(counter-clockwise) and `identifications` (in `Pattern`'s
+`((from_v1, from_v2), (to_v1, to_v2), keep_orientation)` format). The shared
+code in `motif.py` adds the boundary edges (`domain_edge`), the domain
+polygon (`domain`) and the motif polygon (`motif`) so no group repeats them.
+
+The motif is placed automatically: at the incentre of a triangular domain,
+else at the centroid, scaled so its circumscribed circle uses 85% of the
+distance to the nearest domain edge. All domains are convex, so the motif
+then lies strictly inside the domain.
 `Pattern.center` is the domain's centroid. It never lies on a rotation
 centre or a mirror. In some groups it lies on a glide axis, which is fine
 because a glide fixes no points.
@@ -75,7 +81,7 @@ an orientation-reversing map.
 | pmg | rectangle | bottom and top: mirror; left and right: half-turn |
 | pgg | rectangle | bottom and top: half-turn; left → right: glide |
 | cmm | rectangle | bottom, left, right: mirror; top: half-turn |
-| p4 | square | rot 90° @ one corner O; rot 180° @ opposite corner |
+| p4 | square | rot 90° @ one corner O; rot 90° @ opposite corner (2-fold at the other two) |
 | p4m | right isosceles triangle | all edges: mirror |
 | p4g | square | rot 90° @ O; the two edges at the opposite corner: mirror |
 | p3 | 60°/120° rhombus | rot 120° @ each obtuse corner |
@@ -116,8 +122,8 @@ mirror lines; glide lines) plus two helper functions:
   1. a lines tile: mirror and glide lines clipped to the view, edges
      annotated `mirror` / `glide`;
   2. a markers tile: polygons annotated `rot2` (lens approximated by a
-     polygon), `rot3`, `rot4` or `rot6`, in a fixed orientation and a
-     fixed size.
+     polygon), `rot3`, `rot4` or `rot6`, of a fixed size, aligned with a
+     mirror through the centre if there is one (else a fixed orientation).
 
 Because these are ordinary tiles with annotations, any renderer draws them.
 Supporting another output format only needs a style dict.
@@ -127,6 +133,10 @@ Supporting another output format only needs a style dict.
 For each group:
 
 1. Build the `Pattern` and construct it over the enlarged region.
+   `Pattern.construct` only composes the generators it is given, never
+   their inverses, so the identifications are extended with their inverses
+   first (self-gluings such as mirrors and half-turns are their own
+   inverse). Without this, a translation tiles only one quadrant.
 2. Re-annotate the motif polygon of every tile whose transformation has
    determinant −1 from `motif` to `motif_mirrored` (by building new `Tile`s).
 3. Derive the symmetry elements from the tile transformations.
@@ -182,7 +192,9 @@ different):
 | p6 | – | 2, 3, 6 | 0 | no |
 | p6m | 2, 3, 6 | – | 6 | yes |
 
-Tests also check that the motif polygon lies strictly inside each domain.
+Tests also check that the motif polygon lies strictly inside each domain,
+and that the constructed tiles cover all four corners of the view (this
+catches missing inverse generators, which the signature test does not).
 
 Run: `uv run --package wallpaper-groups pytest examples/wallpaper_groups`.
 The root `testpaths` and CI are unchanged.
